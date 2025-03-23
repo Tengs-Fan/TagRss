@@ -59,7 +59,7 @@ impl FeedManager {
                 feed_id,
                 &title,
                 &link,
-                content,
+                content.clone(),
                 entry.published,
             ).await?;
             

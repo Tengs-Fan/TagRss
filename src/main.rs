@@ -100,7 +100,6 @@ async fn main() -> Result<()> {
     
     // Initialize tag manager
     let mut tag_manager = TagManager::new("tag_rules.json");
-    let _ = tag_manager.load_from_file(); // Attempt to load existing rules
     
     match args.command {
         Some(Commands::AddFeed { url }) => {

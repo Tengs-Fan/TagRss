@@ -1,3 +1,5 @@
+use std::collections::{HashSet};
+
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
@@ -13,7 +15,7 @@ pub struct Feed {
 #[derive(Debug, Serialize, Deserialize)]
 pub struct FeedItem {
     pub id: i64,
-    pub tags: Vec<i64>,
+    pub tags: HashSet<String>,  // Should be a set, but the implementation is not serializable, so we use HashSet here
     pub title: String,
     pub url: String,
     pub content: Option<String>,
