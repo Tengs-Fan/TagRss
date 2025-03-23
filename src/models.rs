@@ -1,18 +1,6 @@
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
 
-#[derive(Debug)]
-pub struct Tag {
-    pub id: i64,
-    pub name: String,
-}
-
-pub trait TagRule {
-    fn find_tag() {
-        unimplemented!()
-    }
-}
-
 #[derive(Debug, Serialize, Deserialize)]
 pub struct Feed {
     pub id: i64,
