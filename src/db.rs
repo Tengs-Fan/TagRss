@@ -1,7 +1,6 @@
 use sqlx::{sqlite::SqlitePool, Row};
 use anyhow::Result;
-use chrono::{DateTime, Utc};
-use crate::tag::Tag;
+use crate::models::FeedItem;
 
 pub struct Database {
     pool: SqlitePool,
@@ -36,37 +35,13 @@ impl Database {
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 feed_id INTEGER NOT NULL,
                 title TEXT NOT NULL,
-                url TEXT NOT NULL,
+                tags TEXT,
+                url TEXT NOT NULL UNIQUE,
                 content TEXT,
                 published_at DATETIME,
                 created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
                 FOREIGN KEY (feed_id) REFERENCES feeds(id),
                 UNIQUE(feed_id, url)
-            )
-            "#,
-        )
-        .execute(&self.pool)
-        .await?;
-
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS tags (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                name TEXT NOT NULL UNIQUE
-            )
-            "#,
-        )
-        .execute(&self.pool)
-        .await?;
-
-        sqlx::query(
-            r#"
-            CREATE TABLE IF NOT EXISTS item_tags (
-                item_id INTEGER NOT NULL,
-                tag_id INTEGER NOT NULL,
-                PRIMARY KEY (item_id, tag_id),
-                FOREIGN KEY (item_id) REFERENCES items(id) ON DELETE CASCADE,
-                FOREIGN KEY (tag_id) REFERENCES tags(id) ON DELETE CASCADE
             )
             "#,
         )
@@ -107,31 +82,43 @@ impl Database {
             .map(|row| (row.get(0), row.get(1), row.get(2)))
             .collect())
     }
-    
-    pub async fn add_item(
-        &self,
-        feed_id: i64,
-        title: &str,
-        url: &str,
-        content: Option<String>,
-        published_at: Option<DateTime<Utc>>,
-    ) -> Result<i64> {
+
+    pub async fn check_item_exists(&self, url: &str) -> Result<bool> {
         let result = sqlx::query(
             r#"
-            INSERT OR REPLACE INTO items (feed_id, title, url, content, published_at)
-            VALUES (?, ?, ?, ?, ?)
-            RETURNING id
+            SELECT COUNT(*) FROM items WHERE url = ?
             "#,
         )
-        .bind(feed_id)
-        .bind(title)
         .bind(url)
-        .bind(content)
-        .bind(published_at)
         .fetch_one(&self.pool)
         .await?;
     
-        Ok(result.get(0))
+        let count: i64 = result.get(0);
+        Ok(count > 0)
+    }
+    
+    pub async fn add_item(
+        &self,
+        feed: FeedItem,
+    ) -> Result<()> {
+        let _ = sqlx::query(
+            r#"
+            INSERT OR REPLACE INTO items (title, tags, url, content, published_at)
+            VALUES (?, ?, ?, ?, ?, ?)
+            RETURNING id
+            "#,
+        )
+        .bind(feed.title)
+        // Convert HashSet to String and join with commas
+        // Example: ["tag1", "tag2", "tag3"] -> "tag1,tag2,tag3"
+        .bind(feed.tags.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(","))
+        .bind(feed.url)
+        .bind(feed.content)
+        .bind(feed.published_at)
+        .fetch_one(&self.pool)
+        .await?;
+    
+        Ok(())
     }
     
     pub async fn update_feed_timestamp(&self, feed_id: i64) -> Result<()> {
@@ -149,155 +136,10 @@ impl Database {
         Ok(())
     }
 
-    pub async fn add_tag(&self, name: &str) -> Result<i64> {
-        let result = sqlx::query(
-            r#"
-            INSERT INTO tags (name)
-            VALUES (?)
-            RETURNING id
-            "#,
-        )
-        .bind(name)
-        .fetch_one(&self.pool)
-        .await?;
-    
-        Ok(result.get(0))
-    }
-    
-    pub async fn get_tag_by_name(&self, name: &str) -> Result<Option<Tag>> {
-        let result = sqlx::query(
-            r#"
-            SELECT id, name FROM tags
-            WHERE name = ?
-            "#,
-        )
-        .bind(name)
-        .fetch_optional(&self.pool)
-        .await?;
-        
-        if let Some(row) = result {
-            Ok(Some(Tag {
-                id: row.get(0),
-                name: row.get(1),
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-    
-    pub async fn get_tag_by_id(&self, id: i64) -> Result<Option<Tag>> {
-        let result = sqlx::query(
-            r#"
-            SELECT id, name FROM tags
-            WHERE id = ?
-            "#,
-        )
-        .bind(id)
-        .fetch_optional(&self.pool)
-        .await?;
-        
-        if let Some(row) = result {
-            Ok(Some(Tag {
-                id: row.get(0),
-                name: row.get(1),
-            }))
-        } else {
-            Ok(None)
-        }
-    }
-    
-    pub async fn get_all_tags(&self) -> Result<Vec<Tag>> {
-        let tags = sqlx::query(
-            r#"
-            SELECT id, name FROM tags
-            ORDER BY name
-            "#,
-        )
-        .fetch_all(&self.pool)
-        .await?;
-        
-        Ok(tags
-            .into_iter()
-            .map(|row| Tag {
-                id: row.get(0),
-                name: row.get(1),
-            })
-            .collect())
-    }
-    
-    pub async fn add_tag_to_item(&self, item_id: i64, tag_id: i64) -> Result<()> {
-        let existing = sqlx::query(
-            r#"
-            SELECT 1 FROM item_tags
-            WHERE item_id = ? AND tag_id = ?
-            "#,
-        )
-        .bind(item_id)
-        .bind(tag_id)
-        .fetch_optional(&self.pool)
-        .await?;
-        
-        if existing.is_none() {
-            sqlx::query(
-                r#"
-                INSERT INTO item_tags (item_id, tag_id)
-                VALUES (?, ?)
-                "#,
-            )
-            .bind(item_id)
-            .bind(tag_id)
-            .execute(&self.pool)
-            .await?;
-        }
-        
-        Ok(())
-    }
-    
-    pub async fn get_item_tags(&self, item_id: i64) -> Result<Vec<Tag>> {
-        let tags = sqlx::query(
-            r#"
-            SELECT t.id, t.name
-            FROM tags t
-            JOIN item_tags it ON t.id = it.tag_id
-            WHERE it.item_id = ?
-            ORDER BY t.name
-            "#,
-        )
-        .bind(item_id)
-        .fetch_all(&self.pool)
-        .await?;
-        
-        Ok(tags
-            .into_iter()
-            .map(|row| Tag {
-                id: row.get(0),
-                name: row.get(1),
-            })
-            .collect())
-    }
-    
-    pub async fn get_items_by_tag(&self, tag_id: i64) -> Result<Vec<i64>> {
-        let items = sqlx::query(
-            r#"
-            SELECT item_id
-            FROM item_tags
-            WHERE tag_id = ?
-            "#,
-        )
-        .bind(tag_id)
-        .fetch_all(&self.pool)
-        .await?;
-        
-        Ok(items
-            .into_iter()
-            .map(|row| row.get(0))
-            .collect())
-    }
-
     pub async fn get_all_items(&self) -> Result<Vec<crate::models::FeedItem>> {
         let items = sqlx::query(
             r#"
-            SELECT i.id, i.title, i.url, i.content, i.published_at, i.created_at
+            SELECT i.title, i.tags, i.url, i.content, i.published_at, i.feed_id
             FROM items i
             ORDER BY i.created_at DESC
             "#,
@@ -308,19 +150,16 @@ impl Database {
         let mut result = Vec::new();
         
         for row in items {
-            // For each item, get its tags
-            let item_id: i64 = row.get(0);
-            let tags = self.get_item_tags(item_id).await?;
-            let tag_ids = tags.into_iter().map(|tag| tag.id).collect();
-            
-            result.push(crate::models::FeedItem {
-                id: item_id,
-                tags: tag_ids,
-                title: row.get(1),
+            result.push(FeedItem {
+                feed_id: row.get(5),
+                title: row.get(0),
+                tags: {
+                    let tags_str: String = row.get(1);
+                    tags_str.split(',').filter(|s| !s.is_empty()).map(|s| s.to_string()).collect()
+                },
                 url: row.get(2),
                 content: row.get(3),
                 published_at: row.get(4),
-                created_at: row.get(5),
             });
         }
         

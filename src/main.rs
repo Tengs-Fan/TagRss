@@ -1,12 +1,14 @@
 use clap::{Parser, Subcommand};
 use anyhow::Result;
+use chrono;
 
 mod db;
 mod feed;
 mod models;
 mod tag;
 
-use tag::{TagManager, TagRuleEnum, Contains, TimeRange, FromFeed};
+use tag::{TagManager, TagRuleEnum, Contains, TimeRange };
+use models::Feed;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -75,15 +77,15 @@ enum RuleCommands {
         end: Option<String>,
     },
     
-    /// Add a new from-feed rule
-    #[command(name = "add-feed")]
-    AddFromFeed {
-        /// Name of the tag
-        name: String,
+    // /// Add a new from-feed rule
+    // #[command(name = "add-feed")]
+    // AddFromFeed {
+    //     /// Name of the tag
+    //     name: String,
         
-        /// ID of the feed
-        feed_id: i64,
-    },
+    //     /// ID of the feed
+    //     feed_id: i64,
+    // },
     
     /// Apply rules to existing items
     #[command(name = "apply")]
@@ -96,10 +98,12 @@ async fn main() -> Result<()> {
     
     // Initialize database
     let db = db::Database::new("sqlite:tagrss.db").await?;
-    let mut feed_manager = feed::FeedManager::new(db);
     
     // Initialize tag manager
-    let mut tag_manager = TagManager::new("tag_rules.json");
+    let tag_manager = TagManager::new("tag_rules.json");
+    
+    // Initialize feed manager with tag manager
+    let mut feed_manager = feed::FeedManager::new(db, tag_manager);
     
     match args.command {
         Some(Commands::AddFeed { url }) => {
@@ -118,7 +122,7 @@ async fn main() -> Result<()> {
         
         Some(Commands::UpdateFeeds) => {
             println!("Updating feeds:");
-            feed_manager.update_feeds(Some(&tag_manager)).await?;
+            feed_manager.update_feeds().await?;
             println!("Feeds updated successfully.");
         }
         
@@ -126,7 +130,7 @@ async fn main() -> Result<()> {
             match subcommand {
                 Some(RuleCommands::List) => {
                     println!("Listing rules:");
-                    for (i, rule) in tag_manager.rules().iter().enumerate() {
+                    for (i, rule) in feed_manager.tag_manager.rules().iter().enumerate() {
                         println!("Rule {}: {:?}", i + 1, rule);
                     }
                 }
@@ -134,78 +138,75 @@ async fn main() -> Result<()> {
                 Some(RuleCommands::AddContains { name, target, case_sensitive }) => {
                     println!("Adding contains rule: {} -> {}", name, target);
                     
-                    // First, ensure the tag exists in the database
-                    let tag_id = match feed_manager.db.get_tag_by_name(&name).await? {
-                        Some(tag) => tag.id,
-                        None => feed_manager.db.add_tag(&name).await?,
+                    // Create simplified regex pattern
+                    let regex_pattern = if case_sensitive {
+                        // Use plain string as regex pattern
+                        target.clone()
+                    } else {
+                        // Add case-insensitive flag for regex
+                        format!("(?i){}", target)
                     };
+                    
+                    let tag = tag::Tag::new(name);
                     
                     let rule = Contains {
-                        name: name.clone(),
-                        tag_id,
-                        target_string: target,
-                        case_sensitive,
+                        tag,
+                        target_regex: regex_pattern,
                     };
                     
-                    tag_manager.add_rule(TagRuleEnum::Contains(rule));
-                    tag_manager.save_to_file()?;
+                    feed_manager.tag_manager.add_rule(TagRuleEnum::Contains(rule));
+                    feed_manager.tag_manager.save_to_file()?;
                 }
                 
                 Some(RuleCommands::AddTimeRange { name, start, end }) => {
-                    println!("Adding time range rule: {}", name);
+                    println!("Adding time-range rule: {} -> {} to {}", 
+                        name, 
+                        start.as_ref().map_or("anytime".to_string(), |d| d.to_string()), 
+                        end.as_ref().map_or("anytime".to_string(), |d| d.to_string())
+                    );
+                    
+                    // Create a tag with just a name
+                    let tag = tag::Tag::new(name);
                     
                     // Parse dates if provided
-                    let start_date = if let Some(start) = start {
-                        Some(chrono::DateTime::parse_from_rfc3339(&start)?.with_timezone(&chrono::Utc))
-                    } else {
-                        None
+                    let start_date = match &start {
+                        Some(s) => Some(chrono::DateTime::parse_from_rfc3339(s)?.with_timezone(&chrono::Utc)),
+                        None => None
                     };
                     
-                    let end_date = if let Some(end) = end {
-                        Some(chrono::DateTime::parse_from_rfc3339(&end)?.with_timezone(&chrono::Utc))
-                    } else {
-                        None
-                    };
-                    
-                    // First, ensure the tag exists in the database
-                    let tag_id = match feed_manager.db.get_tag_by_name(&name).await? {
-                        Some(tag) => tag.id,
-                        None => feed_manager.db.add_tag(&name).await?,
+                    let end_date = match &end {
+                        Some(e) => Some(chrono::DateTime::parse_from_rfc3339(e)?.with_timezone(&chrono::Utc)),
+                        None => None
                     };
                     
                     let rule = TimeRange {
-                        name: name.clone(),
-                        tag_id,
+                        tag,
                         start: start_date,
                         end: end_date,
                     };
                     
-                    tag_manager.add_rule(TagRuleEnum::TimeRange(rule));
-                    tag_manager.save_to_file()?;
+                    feed_manager.tag_manager.add_rule(TagRuleEnum::TimeRange(rule));
+                    feed_manager.tag_manager.save_to_file()?;
                 }
                 
-                Some(RuleCommands::AddFromFeed { name, feed_id }) => {
-                    println!("Adding from-feed rule: {} -> Feed ID: {}", name, feed_id);
+                // Some(RuleCommands::AddFromFeed { name, feed_id }) => {
+                //     println!("Adding from-feed rule: {} -> Feed ID: {}", name, feed_id);
                     
-                    // First, ensure the tag exists in the database
-                    let tag_id = match feed_manager.db.get_tag_by_name(&name).await? {
-                        Some(tag) => tag.id,
-                        None => feed_manager.db.add_tag(&name).await?,
-                    };
+                //     // Create a tag with just a name
+                //     let tag = tag::Tag::new(name);
                     
-                    let rule = FromFeed {
-                        name: name.clone(),
-                        tag_id,
-                        feed_id,
-                    };
+                //     let rule = FromFeed {
+                //         tag,
+                //         feed_id,
+                //     };
                     
-                    tag_manager.add_rule(TagRuleEnum::FromFeed(rule));
-                    tag_manager.save_to_file()?;
-                }
+                //     feed_manager.tag_manager.add_rule(TagRuleEnum::FromFeed(rule));
+                //     feed_manager.tag_manager.save_to_file()?;
+                // }
                 
                 Some(RuleCommands::Apply) => {
                     println!("Applying rules to existing items...");
-                    feed_manager.apply_rules_to_existing_items(&tag_manager).await?;
+                    feed_manager.apply_rules_to_existing_items().await?;
                     println!("Rules applied successfully.");
                 }
                 

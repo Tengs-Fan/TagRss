@@ -5,7 +5,7 @@ use anyhow::Result;
 use serde::{Serialize, Deserialize};
 use regex::Regex;
 use chrono::{DateTime, Utc};
-use crate::models::FeedItem;
+use crate::models::{FeedItem, Feed};
 
 #[derive(Debug, Serialize, Deserialize)]
 pub struct TagManager {
@@ -79,7 +79,7 @@ impl Tag {
 pub enum TagRuleEnum {
     TimeRange(TimeRange),
     Contains(Contains),
-    FromFeed(FromFeed),
+    FromFeed(Feed),
 }
 
 impl TagRuleEnum {
@@ -139,41 +139,25 @@ impl TagRule for TimeRange {
 pub struct Contains {
     pub tag: Tag,
     // Use a regex to match the target string
-    pub target_regex: Regex,
+    pub target_regex: String,
 }
 
 impl TagRule for Contains {
     fn find_tag(&self, feed: &FeedItem) -> Option<Tag> {
+        let target_regex = Regex::new(&self.target_regex).unwrap();
+
         // Check title with regex
-        if self.target_regex.is_match(&feed.title) {
+        if target_regex.is_match(&feed.title) {
             return Some(self.tag.clone());
         }
         
         // Also check content if available
         if let Some(content) = &feed.content {
-            if self.target_regex.is_match(content) {
+            if target_regex.is_match(content) {
                 return Some(self.tag.clone());
             }
         }
         
         None
-    }
-}
-
-#[derive(Debug, Serialize, Deserialize, Clone)]
-pub struct FromFeed {
-    pub tag: Tag,
-    pub feed_id: i64,
-}
-
-impl TagRule for FromFeed {
-    fn find_tag(&self, feed: &FeedItem) -> Option<Tag> {
-        // A more complete implementation would compare with feed.feed_id
-        // which isn't currently part of the FeedItem struct
-        if feed.id == self.feed_id {
-            Some(self.tag.clone())
-        } else {
-            None
-        }
     }
 }
