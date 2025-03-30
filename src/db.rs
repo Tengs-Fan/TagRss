@@ -1,5 +1,6 @@
 use sqlx::{sqlite::SqlitePool, Row};
 use anyhow::Result;
+use log::{info, debug, error, warn};
 use crate::models::FeedItem;
 
 pub struct Database {
@@ -8,13 +9,17 @@ pub struct Database {
 
 impl Database {
     pub async fn new(url: &str) -> Result<Self> {
+        debug!("Connecting to database at: {}", url);
         let pool = SqlitePool::connect(url).await?;
         let db = Self { pool };
+        debug!("Database connection established");
         db.init().await?;
+        info!("Database initialized successfully");
         Ok(db)
     }
 
     async fn init(&self) -> Result<()> {
+        debug!("Creating feeds table if it doesn't exist");
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS feeds (
@@ -29,6 +34,7 @@ impl Database {
         .execute(&self.pool)
         .await?;
 
+        debug!("Creating items table if it doesn't exist");
         sqlx::query(
             r#"
             CREATE TABLE IF NOT EXISTS items (
@@ -48,10 +54,12 @@ impl Database {
         .execute(&self.pool)
         .await?;
 
+        debug!("Database schema initialized");
         Ok(())
     }
 
     pub async fn add_feed(&self, url: &str, title: Option<&str>) -> Result<i64> {
+        debug!("Adding feed to database: {} ({})", url, title.unwrap_or("Untitled"));
         let result = sqlx::query(
             r#"
             INSERT INTO feeds (url, title)
@@ -64,10 +72,13 @@ impl Database {
         .fetch_one(&self.pool)
         .await?;
     
-        Ok(result.get(0))
+        let id: i64 = result.get(0);
+        debug!("Feed added with ID: {}", id);
+        Ok(id)
     }
     
     pub async fn get_feeds(&self) -> Result<Vec<(i64, String, Option<String>)>> {
+        debug!("Retrieving all feeds from database");
         let feeds = sqlx::query(
             r#"
             SELECT id, url, title FROM feeds
@@ -77,6 +88,8 @@ impl Database {
         .fetch_all(&self.pool)
         .await?;
     
+        let feed_count = feeds.len();
+        debug!("Retrieved {} feeds from database", feed_count);
         Ok(feeds
             .into_iter()
             .map(|row| (row.get(0), row.get(1), row.get(2)))
@@ -101,27 +114,30 @@ impl Database {
         &self,
         feed: FeedItem,
     ) -> Result<()> {
+        debug!("Adding/updating item: {}", feed.title);
+        let tags_str = feed.tags.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(",");
+        
         let _ = sqlx::query(
             r#"
-            INSERT OR REPLACE INTO items (title, tags, url, content, published_at)
+            INSERT OR REPLACE INTO items (feed_id, title, tags, url, content, published_at)
             VALUES (?, ?, ?, ?, ?, ?)
-            RETURNING id
             "#,
         )
+        .bind(feed.feed_id)
         .bind(feed.title)
-        // Convert HashSet to String and join with commas
-        // Example: ["tag1", "tag2", "tag3"] -> "tag1,tag2,tag3"
-        .bind(feed.tags.iter().map(|t| t.to_string()).collect::<Vec<String>>().join(","))
+        .bind(tags_str)
         .bind(feed.url)
         .bind(feed.content)
         .bind(feed.published_at)
-        .fetch_one(&self.pool)
+        .execute(&self.pool)
         .await?;
     
+        debug!("Item added/updated successfully");
         Ok(())
     }
     
     pub async fn update_feed_timestamp(&self, feed_id: i64) -> Result<()> {
+        debug!("Updating last_updated timestamp for feed ID: {}", feed_id);
         sqlx::query(
             r#"
             UPDATE feeds
@@ -137,6 +153,7 @@ impl Database {
     }
 
     pub async fn get_all_items(&self) -> Result<Vec<crate::models::FeedItem>> {
+        debug!("Retrieving all items from database");
         let items = sqlx::query(
             r#"
             SELECT i.title, i.tags, i.url, i.content, i.published_at, i.feed_id
@@ -146,6 +163,9 @@ impl Database {
         )
         .fetch_all(&self.pool)
         .await?;
+        
+        let item_count = items.len();
+        debug!("Retrieved {} items from database", item_count);
         
         let mut result = Vec::new();
         

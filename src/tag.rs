@@ -5,6 +5,7 @@ use anyhow::Result;
 use serde::{Serialize, Deserialize};
 use regex::Regex;
 use chrono::{DateTime, Utc};
+use log::{info, warn, debug, error};
 use crate::models::{FeedItem, Feed};
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -23,27 +24,53 @@ impl TagManager {
 
     fn load_from_file(file_path: &str) -> Vec<TagRuleEnum> {
         if !Path::new(file_path).exists() {
-            println!("File does not exist");
+            info!("Tag rules file does not exist, creating new file");
+            // Create the file with empty content
+            match fs::File::create(file_path) {
+                Ok(_) => debug!("Created new tag rules file at: {}", file_path),
+                Err(e) => error!("Failed to create tag rules file: {}", e),
+            }
             return Vec::new();
         }
         
-        let mut file = fs::File::open(file_path).expect("Failed to open file");
-        let mut contents = String::new();
-        file.read_to_string(&mut contents).expect("Failed to read content");
+        let mut file = match fs::File::open(file_path) {
+            Ok(file) => file,
+            Err(e) => {
+                error!("Failed to open tag rules file: {}", e);
+                return Vec::new();
+            }
+        };
         
-        let loaded: TagManager = serde_json::from_str(&contents).expect("Failed to parse JSON");
-        loaded.rules
+        let mut contents = String::new();
+        if let Err(e) = file.read_to_string(&mut contents) {
+            error!("Failed to read tag rules content: {}", e);
+            return Vec::new();
+        }
+        
+        match serde_json::from_str(&contents) {
+            Ok(loaded) => {
+                let loaded: TagManager = loaded;
+                debug!("Loaded {} tag rules from file", loaded.rules.len());
+                loaded.rules
+            },
+            Err(e) => {
+                error!("Failed to parse tag rules JSON: {}", e);
+                Vec::new()
+            }
+        }
     }
 
     pub fn save_to_file(&self) -> Result<()> {
         let json = serde_json::to_string(&self)?;
         let mut file = fs::File::create(&self.file_path)?;
         file.write_all(json.as_bytes())?;
+        debug!("Saved {} tag rules to file", self.rules.len());
         Ok(())
     }
 
     pub fn add_rule(&mut self, rule: TagRuleEnum) {
         self.rules.push(rule);
+        debug!("Added new rule, total rules: {}", self.rules.len());
     }
 
     pub fn rules(&self) -> &Vec<TagRuleEnum> {
@@ -51,10 +78,15 @@ impl TagManager {
     }
 
     pub fn apply_rules(&self, feed_item: &mut FeedItem) -> Result<()> {
+        let initial_tag_count = feed_item.tags.len();
         for rule in &self.rules {
             if let Some(tag) = rule.find_tag(feed_item) {
                 feed_item.tags.insert(tag.name);
             }
+        }
+        let new_tag_count = feed_item.tags.len() - initial_tag_count;
+        if new_tag_count > 0 {
+            debug!("Applied {} tags to item: {}", new_tag_count, feed_item.title);
         }
         Ok(())
     }

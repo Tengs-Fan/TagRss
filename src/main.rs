@@ -1,18 +1,32 @@
 use clap::{Parser, Subcommand};
 use anyhow::Result;
 use chrono;
+use log::{info, debug, warn, error, LevelFilter};
 
 mod db;
 mod feed;
 mod models;
 mod tag;
+mod logger;
 
 use tag::{TagManager, TagRuleEnum, Contains, TimeRange };
-use models::Feed;
+use logger::{LogConfig, parse_log_level};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
 struct Args {
+    /// Set the console log level (off, error, warn, info, debug, trace)
+    #[arg(long, default_value = "info")]
+    log_level: String,
+    
+    /// Enable logging to a file
+    #[arg(long)]
+    log_file: Option<String>,
+    
+    /// Set the file log level (off, error, warn, info, debug, trace)
+    #[arg(long, default_value = "debug")]
+    file_log_level: String,
+    
     #[command(subcommand)]
     command: Option<Commands>,
 }
@@ -96,6 +110,21 @@ enum RuleCommands {
 async fn main() -> Result<()> {
     let args = Args::parse();
     
+    // Initialize logger with command line options
+    let log_config = LogConfig {
+        console_level: parse_log_level(&args.log_level),
+        file_level: parse_log_level(&args.file_log_level),
+        log_file: args.log_file,
+    };
+    
+    if let Err(e) = logger::init(log_config) {
+        eprintln!("Warning: Failed to initialize logger: {}", e);
+    }
+    
+    // Log startup info
+    info!("TagRss starting");
+    debug!("Debug logging enabled");
+    
     // Initialize database
     let db = db::Database::new("sqlite:tagrss.db").await?;
     
@@ -107,36 +136,36 @@ async fn main() -> Result<()> {
     
     match args.command {
         Some(Commands::AddFeed { url }) => {
-            println!("Adding feed: {}", url);
+            info!("Adding feed: {}", url);
             feed_manager.add_feed(&url).await?;
         }
         
         Some(Commands::ListFeeds) => {
-            println!("Listing feeds:");
+            info!("Listing feeds:");
             let feeds = feed_manager.db.get_feeds().await?;
             for (id, url, title) in feeds {
                 let title = title.unwrap_or_else(|| "no title".to_string());
-                println!("ID: {}, URL: {}, Title: {}", id, url, title);
+                info!("ID: {}, URL: {}, Title: {}", id, url, title);
             }
         }
         
         Some(Commands::UpdateFeeds) => {
-            println!("Updating feeds:");
+            info!("Updating feeds:");
             feed_manager.update_feeds().await?;
-            println!("Feeds updated successfully.");
+            info!("Feeds updated successfully.");
         }
         
         Some(Commands::Rules { subcommand }) => {
             match subcommand {
                 Some(RuleCommands::List) => {
-                    println!("Listing rules:");
+                    info!("Listing rules:");
                     for (i, rule) in feed_manager.tag_manager.rules().iter().enumerate() {
-                        println!("Rule {}: {:?}", i + 1, rule);
+                        info!("Rule {}: {:?}", i + 1, rule);
                     }
                 }
                 
                 Some(RuleCommands::AddContains { name, target, case_sensitive }) => {
-                    println!("Adding contains rule: {} -> {}", name, target);
+                    info!("Adding contains rule: {} -> {}", name, target);
                     
                     // Create simplified regex pattern
                     let regex_pattern = if case_sensitive {
@@ -159,7 +188,7 @@ async fn main() -> Result<()> {
                 }
                 
                 Some(RuleCommands::AddTimeRange { name, start, end }) => {
-                    println!("Adding time-range rule: {} -> {} to {}", 
+                    info!("Adding time-range rule: {} -> {} to {}", 
                         name, 
                         start.as_ref().map_or("anytime".to_string(), |d| d.to_string()), 
                         end.as_ref().map_or("anytime".to_string(), |d| d.to_string())
@@ -190,7 +219,7 @@ async fn main() -> Result<()> {
                 }
                 
                 // Some(RuleCommands::AddFromFeed { name, feed_id }) => {
-                //     println!("Adding from-feed rule: {} -> Feed ID: {}", name, feed_id);
+                //     info!("Adding from-feed rule: {} -> Feed ID: {}", name, feed_id);
                     
                 //     // Create a tag with just a name
                 //     let tag = tag::Tag::new(name);
@@ -205,21 +234,22 @@ async fn main() -> Result<()> {
                 // }
                 
                 Some(RuleCommands::Apply) => {
-                    println!("Applying rules to existing items...");
+                    info!("Applying rules to existing items...");
                     feed_manager.apply_rules_to_existing_items().await?;
-                    println!("Rules applied successfully.");
+                    info!("Rules applied successfully.");
                 }
                 
                 None => {
-                    println!("Please specify a rule command. Use --help for options.");
+                    warn!("Please specify a rule command. Use --help for options.");
                 }
             }
         }
         
         None => {
-            println!("Please specify a command. Use --help for options.");
+            warn!("Please specify a command. Use --help for options.");
         }
     }
-
+    
+    info!("TagRss finished");
     Ok(())
 }
