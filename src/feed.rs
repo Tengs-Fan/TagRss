@@ -1,4 +1,4 @@
-use anyhow::{Ok, Result};
+use anyhow::Result;
 use feed_rs::parser;
 use reqwest::Client;
 use log::{info, debug, error, warn};
@@ -6,6 +6,8 @@ use crate::db::Database;
 use crate::models::FeedItem;
 use crate::tag::TagManager;
 use std::collections::HashSet;
+// Import the Ok variant for pattern matching
+use std::result::Result::Ok as StdOk;
 
 pub struct FeedManager {
     pub db: Database,
@@ -27,7 +29,7 @@ impl FeedManager {
         debug!("Fetching feed from URL: {}", url);
         // Fetch and parse the feed
         let response = match self.client.get(url).send().await {
-            Ok(resp) => resp,
+            StdOk(resp) => resp,
             Err(e) => {
                 error!("Failed to fetch feed from {}: {}", url, e);
                 return Err(e.into());
@@ -35,7 +37,7 @@ impl FeedManager {
         };
         
         let bytes = match response.bytes().await {
-            Ok(b) => b,
+            StdOk(b) => b,
             Err(e) => {
                 error!("Failed to get response body from {}: {}", url, e);
                 return Err(e.into());
@@ -44,7 +46,7 @@ impl FeedManager {
         
         let feed = parser::parse(&bytes[..]);
         let feed = match feed {
-            Ok(f) => f,
+            StdOk(f) => f,
             Err(e) => {
                 error!("Failed to parse feed from {}: {}", url, e);
                 return Err(e.into());

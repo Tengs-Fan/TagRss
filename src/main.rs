@@ -8,9 +8,11 @@ mod feed;
 mod models;
 mod tag;
 mod logger;
+mod folder;
 
 use tag::{TagManager, TagRuleEnum, Contains, TimeRange };
 use logger::{LogConfig, parse_log_level};
+use folder::FolderManager;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -53,6 +55,13 @@ enum Commands {
     Rules {
         #[command(subcommand)]
         subcommand: Option<RuleCommands>,
+    },
+    
+    /// Manage folders
+    #[command(name = "folders")]
+    Folders {
+        #[command(subcommand)]
+        subcommand: Option<FolderCommands>,
     },
 }
 
@@ -106,6 +115,17 @@ enum RuleCommands {
     Apply,
 }
 
+#[derive(Subcommand, Debug)]
+enum FolderCommands {
+    /// List all folders
+    #[command(name = "list")]
+    List,
+    
+    /// Reload folders from the YAML configuration file
+    #[command(name = "reload")]
+    Reload,
+}
+
 #[tokio::main]
 async fn main() -> Result<()> {
     let args = Args::parse();
@@ -130,6 +150,9 @@ async fn main() -> Result<()> {
     
     // Initialize tag manager
     let tag_manager = TagManager::new("tag_rules.json");
+    
+    // Initialize folder manager with YAML config
+    let mut folder_manager = FolderManager::new("folders.yml");
     
     // Initialize feed manager with tag manager
     let mut feed_manager = feed::FeedManager::new(db, tag_manager);
@@ -244,6 +267,37 @@ async fn main() -> Result<()> {
                 }
             }
         }
+        
+        Some(Commands::Folders { subcommand }) => {
+            match subcommand {
+                Some(FolderCommands::List) => {
+                    info!("Listing folders:");
+                    if folder_manager.folders.is_empty() {
+                        info!("No folders defined");
+                    } else {
+                        for (i, folder) in folder_manager.folders.iter().enumerate() {
+                            info!("Folder {}: {}", i + 1, folder.name);
+                        }
+                    }
+                },
+                
+                Some(FolderCommands::Reload) => {
+                    info!("Reloading folder configuration from: {}", "folders.yml");
+                    match folder_manager.reload_config() {
+                        Ok(_) => {
+                            info!("Folder configuration reloaded successfully");
+                        },
+                        Err(e) => {
+                            error!("Failed to reload folder configuration: {}", e);
+                        }
+                    }
+                },
+                
+                None => {
+                    warn!("Please specify a folder command. Use --help for options.");
+                },
+            }
+        },
         
         None => {
             warn!("Please specify a command. Use --help for options.");
