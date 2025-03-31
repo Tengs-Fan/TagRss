@@ -1,0 +1,35 @@
+folders:
+  - name: "Technology Folder"
+    tag: "technology"
+
+  - name: "All things this week"
+    time: "2025-01-01 ~ "
+
+  - name: "All things about Biden"
+    contains: "Biden"
+
+  - name: "Today's News"
+    and:
+      - time: "Yesterday ~ "
+      - tag: "news"
+
+  - name: "AI updates"
+    and:
+      - tag: "ai"
+      - time: "2025-01-01 ~ "
+
+  - name: "Science or News"
+    or:
+      - tag: "science"
+      - tag: "news"
+
+  - name: "Complex Rules Example"
+    and:
+      - tag: "technology"
+      - not:
+          tag: "politics"
+      - contains: "Trump"
+      - or:
+          - tag: "ai"
+          - tag: "programming"
+      - time: "2024-01-01 ~ 2024-01-31"
