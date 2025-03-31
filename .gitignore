@@ -2,3 +2,4 @@ Cargo.lock
 target/
 tagrss.db
 tag_rules.json
+.vscode/
