@@ -1,0 +1,31 @@
+# Folder definitions
+# Each folder is a view filtered by a tag expression
+#
+# Syntax:
+#   tag           - matches articles with this tag (hierarchical: tech/ai matches tech/ai/llm)
+#   NOT expr      - negation
+#   expr AND expr - both must match
+#   expr OR expr  - either must match
+#   (expr)        - grouping
+
+folders:
+  - name: Priority
+    filter: important AND NOT long
+
+  - name: Quick Tech
+    filter: tech AND short
+
+  - name: AI News
+    filter: tech/ai
+
+  - name: Leisure
+    filter: life OR (NOT important AND NOT tech)
+
+  - name: Fresh & Important
+    filter: fresh AND important
+
+  - name: Deep Reads
+    filter: long AND (science OR tech)
+
+  - name: World News
+    filter: news/world AND NOT old
