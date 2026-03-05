@@ -14,9 +14,9 @@ use folder::{Expr, Folder};
 use models::Rule;
 
 const DB_PATH: &str = "tagrss.db";
-const FEEDS_PATH: &str = "feeds.opml";
-const RULES_PATH: &str = "rules.yaml";
-const FOLDERS_PATH: &str = "folders.yaml";
+const FEEDS_PATH: &str = "configs/feeds.opml";
+const RULES_PATH: &str = "configs/rules.yaml";
+const FOLDERS_PATH: &str = "configs/folders.yaml";
 
 #[derive(Parser)]
 #[command(name = "tagrss")]
@@ -69,10 +69,10 @@ enum Commands {
     Read { article_id: i64 },
     /// Import sources from OPML and rules from YAML
     Import {
-        /// OPML file path (default: feeds.opml)
+        /// OPML file path (default: configs/feeds.opml)
         #[arg(long)]
         feeds: Option<String>,
-        /// Rules YAML file path (default: rules.yaml)
+        /// Rules YAML file path (default: configs/rules.yaml)
         #[arg(long)]
         rules: Option<String>,
     },
@@ -116,7 +116,7 @@ enum RuleCmd {
     Apply,
     /// Import rules from YAML file
     Import {
-        #[arg(default_value = "rules.yaml")]
+        #[arg(default_value = "configs/rules.yaml")]
         path: String,
     },
 }
@@ -160,7 +160,7 @@ async fn main() -> Result<()> {
         Commands::Sources => {
             let sources = db.get_sources()?;
             if sources.is_empty() {
-                println!("No sources. Use 'tagrss import' to load from feeds.opml");
+                println!("No sources. Use 'tagrss import' to load from {}", FEEDS_PATH);
                 return Ok(());
             }
             println!("{:<4} {:<40} {}", "ID", "Title", "Tags");
@@ -258,7 +258,7 @@ async fn main() -> Result<()> {
             RuleCmd::List => {
                 let rules = db.get_rules()?;
                 if rules.is_empty() {
-                    println!("No rules defined. Use 'tagrss rule import' to load from rules.yaml");
+                    println!("No rules defined. Use 'tagrss rule import' to load from {}", RULES_PATH);
                     return Ok(());
                 }
                 for (id, rule) in rules {
