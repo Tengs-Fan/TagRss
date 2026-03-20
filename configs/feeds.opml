@@ -4,69 +4,492 @@
     <title>TagRSS Feeds</title>
   </head>
   <body>
-    <!-- Tech Sources -->
-    <outline type="rss"
-             text="Hacker News"
-             xmlUrl="https://hnrss.org/frontpage"
-             htmlUrl="https://news.ycombinator.com"
-             tags="tech,news,important" />
-
-    <outline type="rss"
-             text="Ars Technica"
-             xmlUrl="https://feeds.arstechnica.com/arstechnica/technology-lab"
-             htmlUrl="https://arstechnica.com"
-             tags="tech,news" />
-
-    <outline type="rss"
-             text="Lobsters"
-             xmlUrl="https://lobste.rs/rss"
-             htmlUrl="https://lobste.rs"
-             tags="tech/programming,important" />
-
-    <!-- AI Sources -->
-    <outline type="rss"
-             text="OpenAI Blog"
-             xmlUrl="https://openai.com/blog/rss.xml"
-             htmlUrl="https://openai.com/blog"
-             tags="tech/ai/llm,important" />
-
-    <outline type="rss"
-             text="AI News - MIT"
-             xmlUrl="https://news.mit.edu/topic/mitartificial-intelligence2-rss.xml"
-             htmlUrl="https://news.mit.edu/topic/artificial-intelligence2"
-             tags="tech/ai,science" />
-
-    <!-- Science -->
-    <outline type="rss"
-             text="Quanta Magazine"
-             xmlUrl="https://www.quantamagazine.org/feed"
-             htmlUrl="https://www.quantamagazine.org"
-             tags="science,important" />
-
-    <!-- News -->
-    <outline type="rss"
-             text="BBC World"
-             xmlUrl="https://feeds.bbci.co.uk/news/world/rss.xml"
-             htmlUrl="https://www.bbc.com/news/world"
-             tags="news/world" />
-
-    <outline type="rss"
-             text="NYT Technology"
-             xmlUrl="https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
-             htmlUrl="https://www.nytimes.com/section/technology"
-             tags="tech,news" />
-
-    <!-- Life -->
-    <outline type="rss"
-             text="Serious Eats"
-             xmlUrl="https://www.seriouseats.com/feeds/serious-eats"
-             htmlUrl="https://www.seriouseats.com"
-             tags="life/cooking" />
-
-    <outline type="rss"
-             text="Brain Pickings"
-             xmlUrl="https://www.themarginalian.org/feed/"
-             htmlUrl="https://www.themarginalian.org"
-             tags="life/reading,important" />
+    <!-- Cleaned manually from ReadKit OPML; tags kept intentionally conservative. -->
+    <outline type="rss" text="Academy of Ideas - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCiRiQGCHGjDLT9FQXFW0I3A" title="Academy of Ideas - YouTube" />
+    <outline type="rss" text="Alexandre Afonso" xmlUrl="https://alexandreafonso.me/feed/" title="Alexandre Afonso" />
+    <outline type="rss" text="Better Than Yesterday" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCpExuV8qJMfCaSQNL1YG6bQ" title="Better Than Yesterday" />
+    <outline type="rss" text="Complexes" xmlUrl="http://complexes.blogspot.com/feeds/posts/default" title="Complexes" />
+    <outline type="rss" text="COMPLEXITY" xmlUrl="https://feeds.simplecast.com/OzDH_At2" title="COMPLEXITY" />
+    <outline type="rss" text="Complexity Digest" xmlUrl="https://comdig.unam.mx/feed/" title="Complexity Digest" />
+    <outline type="rss" text="Evolution 2.0" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCog30PokpThQnXY1A2pVqAg" title="Evolution 2.0" />
+    <outline type="rss" text="Fred's Blog" xmlUrl="https://www.kenshinji.me/feed/" title="Fred's Blog" />
+    <outline type="rss" text="Jinshan Wu | Institute of Educational System Science, School of Systems Science, Beijing Normal University" xmlUrl="http://iess.bnu.edu.cn/en/authors/jinshan-wu/index.xml" title="Jinshan Wu | Institute of Educational System Science, School of Systems Science, Beijing Normal University" />
+    <outline type="rss" text="Lex Fridman Podcast" xmlUrl="https://lexfridman.com/feed/podcast/" title="Lex Fridman Podcast" />
+    <outline type="rss" text="Peter Turchin" xmlUrl="https://peterturchin.com/feed/" title="Peter Turchin" />
+    <outline type="rss" text="Primer - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCKzJFdi57J53Vr_BkTfN3uQ" title="Primer - YouTube" />
+    <outline type="rss" text="Razib Khan's Unsupervised Learning" xmlUrl="https://razib.substack.com/feed/" title="Razib Khan's Unsupervised Learning" />
+    <outline type="rss" text="YJango 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/344849038" title="YJango 的 bilibili 动态" />
+    <outline type="rss" text="与书籍度过漫长岁月 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/252099076" title="与书籍度过漫长岁月 的 bilibili 动态" />
+    <outline type="rss" text="Big Think - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCvQECJukTDE2i6aCoMnS-Vg" title="Big Think - YouTube" tags="depth/medium" />
+    <outline type="rss" text="What I've Learned - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCqYPhGiB9tkShZorfgcL2lA" title="What I've Learned - YouTube" tags="depth/medium" />
+    <outline type="rss" text="Big Think" xmlUrl="https://bigthink.com/feed/all" title="Big Think" tags="depth/medium,mode/practical" />
+    <outline type="rss" text="Lex Fridman - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCSHZKyawb77ixDdsGog4iWA" title="Lex Fridman - YouTube" tags="depth/medium,mode/practical" />
+    <outline type="rss" text="iyouport" xmlUrl="https://iyouport.substack.com/feed" title="iyouport" tags="depth/medium,mode/practical" />
+    <outline type="rss" text="Forte Labs" xmlUrl="https://fortelabs.com/feed/" title="Forte Labs" tags="depth/medium,mode/practical,structure/series" />
+    <outline type="rss" text="今天看点啥 - Topbook" xmlUrl="https://rsshub.app/topbook/today" title="今天看点啥 - Topbook" />
+    <outline type="rss" text="少数派专栏-知识管理之术" xmlUrl="https://rsshub.app/sspai/column/263" title="少数派专栏-知识管理之术" />
+    <outline type="rss" text="少数派用户「MrCoffeeTalker」动态更新" xmlUrl="https://rsshub.app/sspai/activity/g52evo9a" title="少数派用户「MrCoffeeTalker」动态更新" />
+    <outline type="rss" text="汤质看本质" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCyyZmjaoQtONBvxlyb-TJOw" title="汤质看本质" />
+    <outline type="rss" text="汤质看本质 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/362588980" title="汤质看本质 的 bilibili 动态" />
+    <outline type="rss" text="海德沙龙（HeadSalon）" xmlUrl="http://headsalon.org/feed" title="海德沙龙（HeadSalon）" />
+    <outline type="rss" text="Wait But Why" xmlUrl="https://waitbutwhy.com/feed" title="Wait But Why" tags="depth/deep" />
+    <outline type="rss" text="Lobsters: cogsci - Cognitive Science" xmlUrl="https://lobste.rs/t/cogsci.rss" title="Lobsters: cogsci - Cognitive Science" tags="depth/deep,format/filter,structure/series" />
+    <outline type="rss" text="豆瓣 - 子非鱼" xmlUrl="https://rsshub.app/douban/people/52605176/status" title="豆瓣 - 子非鱼" tags="depth/deep,structure/series" />
+    <outline type="rss" text="Scott Young - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCDP05_kNaT6yuBI5ilxKOew" title="Scott Young - YouTube" tags="depth/deep,structure/series" />
+    <outline type="rss" text="whigzhou的微博" xmlUrl="https://rsshub.app/weibo/user/1400461002/readable=1&amp;authorNameBold=1&amp;showAuthorInTitle=1&amp;showAuthorInDesc=1&amp;showAuthorAvatarInDesc=1&amp;showEmojiForRetweet=1&amp;showRetweetTextInTitle=0&amp;addLinkForPics=1&amp;showTimestampInDescription=1&amp;showTimestampInDescription=1&amp;heightOfPics=150" title="whigzhou的微博" tags="depth/deep,structure/misc" />
+    <outline type="rss" text="𝚟𝚎𝚛𝚖𝚊𝚍𝚎𝚗" xmlUrl="https://vermaden.wordpress.com/feed/" title="𝚟𝚎𝚛𝚖𝚊𝚍𝚎𝚗" tags="depth/deep,format/filter,mode/practical" />
+    <outline type="rss" text="吴金闪的工作和思考" xmlUrl="https://www.systemsci.org/jinshanw/feed/" title="吴金闪的工作和思考" tags="depth/deep,mode/practical,structure/series" />
+    <outline type="rss" text="元非 的收藏" xmlUrl="https://www.douban.com/feed/people/Hayeky/interests" title="元非 的收藏" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="研读营 – 集智俱乐部" xmlUrl="https://swarma.org/?feed=rss2&amp;special=%25e7%25a0%2594%25e8%25af%25bb%25e8%2590%25a5" title="研读营 – 集智俱乐部" />
+    <outline type="rss" text="集智学园 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/238664541" title="集智学园 的 bilibili 动态" />
+    <outline type="rss" text="The Mathematical Yawp" xmlUrl="https://mathyawp.wordpress.com/feed/" title="The Mathematical Yawp" tags="topic/math" />
+    <outline type="rss" text="Bartosz Milewski's Programming Cafe" xmlUrl="https://bartoszmilewski.com/feed/" title="Bartosz Milewski's Programming Cafe" tags="topic/math" />
+    <outline type="rss" text="Lobsters: math - Mathematics" xmlUrl="https://lobste.rs/t/math.rss" title="Lobsters: math - Mathematics" tags="depth/medium,topic/math" />
+    <outline type="rss" text="学弱猹的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/liu-li-94-49" title="学弱猹的知乎动态" tags="topic/math" />
+    <outline type="rss" text="Think Twice" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC9yt3wz-6j19RwD5m5f6HSg" title="Think Twice" tags="depth/deep,topic/math" />
+    <outline type="rss" text="zero的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/zerojz" title="zero的知乎回答" tags="depth/deep,mode/practical,topic/math" />
+    <outline type="rss" text="Visual Insight" xmlUrl="https://blogs.ams.org/visualinsight/feed/" title="Visual Insight" tags="depth/deep,format/exercise,mode/practical,topic/math" />
+    <outline type="rss" text="Everyday Astronaut - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC6uKrU_WqJ1R2HMTY3LIx5Q" title="Everyday Astronaut - YouTube" tags="topic/science" />
+    <outline type="rss" text="FreeMedEducation - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCTCEJCypL-cwp2EWlT5pmGg" title="FreeMedEducation - YouTube" tags="topic/science" />
+    <outline type="rss" text="ingomar200" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCypN3QKwo-Fajp391i0IQ0A" title="ingomar200" tags="topic/science" />
+    <outline type="rss" text="melodysheep" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCR9sFzaG9Ia_kXJhfxtFMBA" title="melodysheep" tags="topic/science" />
+    <outline type="rss" text="Middlebury Remote Sensing" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCgNXU17K63E2fzWxYv1-_4w" title="Middlebury Remote Sensing" tags="topic/science" />
+    <outline type="rss" text="PBS Infinite Series" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCs4aHmggTfFrpkPcWSaBN9g" title="PBS Infinite Series" tags="topic/science" />
+    <outline type="rss" text="PBS Space Time - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC7_gcs09iThXybpVgjHZ_7g" title="PBS Space Time - YouTube" tags="topic/science" />
+    <outline type="rss" text="periodicvideos - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=periodicvideos" title="periodicvideos - YouTube" tags="topic/science" />
+    <outline type="rss" text="Quanta Magazine - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCTpmmkp1E4nmZqWPS-dl5bg" title="Quanta Magazine - YouTube" tags="topic/science" />
+    <outline type="rss" text="Scott Manley - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCxzC4EngIsMrPmbm6Nxvb-A" title="Scott Manley - YouTube" tags="topic/science" />
+    <outline type="rss" text="Seeker - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCzWQYUVCpZqtN93H8RR44Qw" title="Seeker - YouTube" tags="topic/science" />
+    <outline type="rss" text="Steve Mould - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCEIwxahdLz7bap-VDs9h35A" title="Steve Mould - YouTube" tags="topic/science" />
+    <outline type="rss" text="The Periodic Table of Videos" xmlUrl="http://www.periodicvideos.com/rss_feed.xml" title="The Periodic Table of Videos" tags="topic/science" />
+    <outline type="rss" text="WorldLineC204的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/worldline" title="WorldLineC204的知乎动态" tags="topic/science" />
+    <outline type="rss" text="Pandora Eartha的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/PandoraEartha" title="Pandora Eartha的知乎回答" tags="depth/medium,structure/misc" />
+    <outline type="rss" text="吾欲揽六龙的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/hui-che-gua-fu-sang-93" title="吾欲揽六龙的知乎回答" tags="topic/science" />
+    <outline type="rss" text="攀缘的井蛙 的知乎文章" xmlUrl="https://rsshub.app/zhihu/posts/people/jason-53-77-86" title="攀缘的井蛙 的知乎文章" tags="topic/science" />
+    <outline type="rss" text="數心 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/346660989" title="數心 的 bilibili 动态" tags="topic/science" />
+    <outline type="rss" text="Maki的完美算术教室 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/391930545" title="Maki的完美算术教室 的 bilibili 动态" tags="depth/deep,format/course,mode/practical,structure/series,topic/science" />
+    <outline type="rss" text="The Action Lab - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC1VLQPn9cYSqx8plbk9RxxQ" title="The Action Lab - YouTube" tags="depth/shallow,topic/science" />
+    <outline type="rss" text="赵泠的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/MarryMea" title="赵泠的知乎动态" tags="depth/shallow,structure/misc,topic/science" />
+    <outline type="rss" text="魔法师七七 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/1296461" title="魔法师七七 的 bilibili 动态" tags="topic/science" />
+    <outline type="rss" text="捕蛇者说" xmlUrl="https://pythonhunter.org/episodes/feed.xml" title="捕蛇者说" />
+    <outline type="rss" text="-T.K.- - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCRgzb2lhOC1rmteTkJNuAGA" title="-T.K.- - YouTube" />
+    <outline type="rss" text="AdamW on Linux and more" xmlUrl="https://www.happyassassin.net//rss.xml" title="AdamW on Linux and more" />
+    <outline type="rss" text="Addy's Blog" xmlUrl="https://addy-dclxvi.github.io/index.xml" title="Addy's Blog" />
+    <outline type="rss" text="AI算法与图像处理 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/288489574" title="AI算法与图像处理 的 bilibili 动态" />
+    <outline type="rss" text="Ayende @ Rahien" xmlUrl="http://feeds.feedburner.com/AyendeRahien" title="Ayende @ Rahien" />
+    <outline type="rss" text="Becky Hansmeyer" xmlUrl="https://beckyhansmeyer.com/feed/" title="Becky Hansmeyer" />
+    <outline type="rss" text="blog.liw.fi" xmlUrl="https://blog.liw.fi/index.atom" title="blog.liw.fi" />
+    <outline type="rss" text="Bootlin" xmlUrl="https://bootlin.com/feed/" title="Bootlin" />
+    <outline type="rss" text="Command Line Heroes" xmlUrl="https://feeds.pacific-content.com/commandlineheroes" title="Command Line Heroes" />
+    <outline type="rss" text="Computational Complexity" xmlUrl="http://blog.computationalcomplexity.org/feeds/posts/default" title="Computational Complexity" />
+    <outline type="rss" text="CppCon - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCMlGfpWw-RUdWX_JbLCukXg" title="CppCon - YouTube" />
+    <outline type="rss" text="Cᐩᐩ Weekly With Jason Turner - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCxHAlbZQNFU2LgEtiqd2Maw" title="Cᐩᐩ Weekly With Jason Turner - YouTube" />
+    <outline type="rss" text="Daniel Lemire's blog" xmlUrl="http://feeds.feedburner.com/daniel-lemire/atom" title="Daniel Lemire's blog" />
+    <outline type="rss" text="DeepMind Blog" xmlUrl="https://rsshub.app/deepmind/blog" title="DeepMind Blog" />
+    <outline type="rss" text="Dennis Yurichev" xmlUrl="https://yurichev.org/rss.xml" title="Dennis Yurichev" />
+    <outline type="rss" text="Erica Sadun" xmlUrl="https://ericasadun.com/feed/" title="Erica Sadun" />
+    <outline type="rss" text="Front de Libération des FPGA" xmlUrl="http://www.fabienm.eu/flf/feed/" title="Front de Libération des FPGA" />
+    <outline type="rss" text="Game Maker's Toolkit - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCqJ-Xo29CKyLTjn6z2XwYAw" title="Game Maker's Toolkit - YouTube" />
+    <outline type="rss" text="Glavo的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/glavo" title="Glavo的知乎回答" />
+    <outline type="rss" text="GOTO Conferences - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCs_tLP3AiwYKwdUHpltJPuA" title="GOTO Conferences - YouTube" />
+    <outline type="rss" text="Hack+" xmlUrl="https://hack.plus/rss" title="Hack+" />
+    <outline type="rss" text="Information is Beautiful" xmlUrl="https://informationisbeautiful.net/feed/" title="Information is Beautiful" />
+    <outline type="rss" text="Kalle Tech" xmlUrl="https://kalletech.com/feed/" title="Kalle Tech" />
+    <outline type="rss" text="levenez.com" xmlUrl="https://www.levenez.com/rss.xml" title="levenez.com" />
+    <outline type="rss" text="Linux技术分享官 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/485560861" title="Linux技术分享官 的 bilibili 动态" />
+    <outline type="rss" text="LiveOverflow" xmlUrl="https://liveoverflow.com/rss/" title="LiveOverflow" />
+    <outline type="rss" text="LiveOverflow - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UClcE-kVhqyiHCcjYwcpfj9w" title="LiveOverflow - YouTube" />
+    <outline type="rss" text="LiveUnderflow" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCNNfzr9A5dEOscVEDyyzo-A" title="LiveUnderflow" />
+    <outline type="rss" text="Lobsters: lisp - Lisp and Scheme programming" xmlUrl="https://lobste.rs/t/lisp.rss" title="Lobsters: lisp - Lisp and Scheme programming" />
+    <outline type="rss" text="Lobsters: ml - MetaLanguage, OCaml programming" xmlUrl="https://lobste.rs/t/ml.rss" title="Lobsters: ml - MetaLanguage, OCaml programming" />
+    <outline type="rss" text="Lobsters: osdev - Operating system design and development when no specific OS tag exists" xmlUrl="https://lobste.rs/t/osdev.rss" title="Lobsters: osdev - Operating system design and development when no specific OS tag exists" />
+    <outline type="rss" text="Lobsters: performance - Performance and optimization" xmlUrl="https://lobste.rs/t/performance.rss" title="Lobsters: performance - Performance and optimization" />
+    <outline type="rss" text="Lobsters: practices - Development and team practices" xmlUrl="https://lobste.rs/t/practices.rss" title="Lobsters: practices - Development and team practices" />
+    <outline type="rss" text="Lobsters: scaling - Scaling and architecture" xmlUrl="https://lobste.rs/t/scaling.rss" title="Lobsters: scaling - Scaling and architecture" />
+    <outline type="rss" text="Meeting Cpp - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCJpMLydEYA08vusDkq3FmjQ" title="Meeting Cpp - YouTube" />
+    <outline type="rss" text="Mixpanel Engineering - Medium" xmlUrl="https://engineering.mixpanel.com/feed/" title="Mixpanel Engineering - Medium" />
+    <outline type="rss" text="Molly Rocket" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCaTznQhurW5AaiYPbhEA-KA" title="Molly Rocket" />
+    <outline type="rss" text="Programming Idioms recently created idioms" xmlUrl="https://programming-idioms.org/rss-recently-created" title="Programming Idioms recently created idioms" />
+    <outline type="rss" text="René Rebe" xmlUrl="https://rene.rebe.de/feed/" title="René Rebe" />
+    <outline type="rss" text="SiFiveInc" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCqpdhncf4nxTfy0QZh1YWLQ" title="SiFiveInc" />
+    <outline type="rss" text="Simple Tutorials for Embedded Systems" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCfKxBj7XEh7Bcs-r3n7IGVw" title="Simple Tutorials for Embedded Systems" />
+    <outline type="rss" text="Steven Brunton" xmlUrl="https://twitter.com/eigensteve" title="Steven Brunton" />
+    <outline type="rss" text="The LLVM Project Blog" xmlUrl="https://blog.llvm.org/index.xml" title="The LLVM Project Blog" />
+    <outline type="rss" text="The Shape of Everything" xmlUrl="https://shapeof.com/feed.json" title="The Shape of Everything" />
+    <outline type="rss" text="whitequark's lab notebook" xmlUrl="https://lab.whitequark.org/atom.xml" title="whitequark's lab notebook" />
+    <outline type="rss" text="WikiChip Fuse" xmlUrl="https://fuse.wikichip.org/feed/" title="WikiChip Fuse" />
+    <outline type="rss" text="Xe's Blog" xmlUrl="https://xeiaso.net/blog.rss" title="Xe's Blog" />
+    <outline type="rss" text="Zig SHOWTIME - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC2EQzAewrC10KCDFSS4j-zA" title="Zig SHOWTIME - YouTube" />
+    <outline type="rss" text="Lobsters: api - API development/implementation" xmlUrl="https://lobste.rs/t/api.rss" title="Lobsters: api - API development/implementation" tags="depth/medium,format/filter,structure/misc" />
+    <outline type="rss" text="Lobsters: haskell - Haskell programming" xmlUrl="https://lobste.rs/t/haskell.rss" title="Lobsters: haskell - Haskell programming" tags="depth/medium,format/filter,structure/misc" />
+    <outline type="rss" text="Lobsters: historical - History and retrospectives (not for things that happen to be old)" xmlUrl="https://lobste.rs/t/historical.rss" title="Lobsters: historical - History and retrospectives (not for things that happen to be old)" tags="depth/medium,format/filter,structure/misc" />
+    <outline type="rss" text="Lobsters: programming - Use when every tag or no specific tag applies" xmlUrl="https://lobste.rs/t/programming.rss" title="Lobsters: programming - Use when every tag or no specific tag applies" tags="depth/medium,format/filter,structure/misc" />
+    <outline type="rss" text="Lobsters: go - Golang programming" xmlUrl="https://lobste.rs/t/go.rss" title="Lobsters: go - Golang programming" tags="depth/medium,format/filter,mode/practical,structure/misc" />
+    <outline type="rss" text="少数派专题广场更新推送" xmlUrl="https://rsshub.app/sspai/topics" title="少数派专题广场更新推送" />
+    <outline type="rss" text="思想家公社的门口：量子化学·分子模拟·二次元" xmlUrl="http://sobereva.com/feed/" title="思想家公社的门口：量子化学·分子模拟·二次元" />
+    <outline type="rss" text="Lobsters: wasm - webassembly" xmlUrl="https://lobste.rs/t/wasm.rss" title="Lobsters: wasm - webassembly" tags="depth/deep,format/filter" />
+    <outline type="rss" text="Lobsters: zig - Zig programming" xmlUrl="https://lobste.rs/t/zig.rss" title="Lobsters: zig - Zig programming" tags="depth/deep,format/filter" />
+    <outline type="rss" text="Lobsters: c - C programming" xmlUrl="https://lobste.rs/t/c.rss" title="Lobsters: c - C programming" tags="depth/deep,format/filter,mode/practical,structure/misc" />
+    <outline type="rss" text="Lobsters: vim - Vim editor" xmlUrl="https://lobste.rs/t/vim.rss" title="Lobsters: vim - Vim editor" tags="depth/shallow" />
+    <outline type="rss" text="WWW.LAB-Z.COM" xmlUrl="http://www.lab-z.com/feed/" title="WWW.LAB-Z.COM" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="Two Minute Papers - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg" title="Two Minute Papers - YouTube" tags="depth/shallow,topic/ai,topic/programming" />
+    <outline type="rss" text="Lobsters: systemd - Linux systemd" xmlUrl="https://lobste.rs/t/systemd.rss" title="Lobsters: systemd - Linux systemd" tags="depth/shallow,mode/practical" />
+    <outline type="rss" text="Lobsters: emacs - Emacs editor" xmlUrl="https://lobste.rs/t/emacs.rss" title="Lobsters: emacs - Emacs editor" tags="depth/shallow,mode/practical,structure/misc" />
+    <outline type="rss" text="清华大学 TUNA 协会" xmlUrl="https://tuna.moe/feed.xml" title="清华大学 TUNA 协会" />
+    <outline type="rss" text="Arkive - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC8MzgBGB-6UjVac7SHH2bHQ" title="Arkive - YouTube" />
+    <outline type="rss" text="Codeforces - Contests" xmlUrl="https://rsshub.app/codeforces/contests" title="Codeforces - Contests" />
+    <outline type="rss" text="Coyote Blog" xmlUrl="https://feeds.feedburner.com/CoyoteBlog" title="Coyote Blog" />
+    <outline type="rss" text="DAVID'S BLOG" xmlUrl="https://blog.davidweng.tk/feed" title="DAVID'S BLOG" />
+    <outline type="rss" text="inessential" xmlUrl="https://inessential.com/feed.json" title="inessential" tags="topic/programming" />
+    <outline type="rss" text="Latreia.Histor 的收藏" xmlUrl="https://www.douban.com/feed/people/102978237/interests" title="Latreia.Histor 的收藏" />
+    <outline type="rss" text="Meet Arnold - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCY3TJECrA90t9YTrxhdjcVw" title="Meet Arnold - YouTube" />
+    <outline type="rss" text="NASA Astronomy Picture of the Day" xmlUrl="https://rsshub.app/nasa/apod" title="NASA Astronomy Picture of the Day" />
+    <outline type="rss" text="SemiWiki" xmlUrl="https://semiwiki.com/feed/" title="SemiWiki" />
+    <outline type="rss" text="TED - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCAuUUnT6oDeKwE6v1NGQxug" title="TED - YouTube" />
+    <outline type="rss" text="UBC Computer Science" xmlUrl="https://twitter.com/UBC_CS" title="UBC Computer Science" />
+    <outline type="rss" text="UBC Computer Science Student Society on UBC CSSS" xmlUrl="https://ubccsss.org/index.xml" title="UBC Computer Science Student Society on UBC CSSS" />
+    <outline type="rss" text="William Spaniel - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCJDIGW0ywWw9Kh9_vtwqxXA" title="William Spaniel - YouTube" />
+    <outline type="rss" text="中世与近世之间 的收藏" xmlUrl="https://www.douban.com/feed/people/158427100/interests" title="中世与近世之间 的收藏" tags="depth/medium" />
+    <outline type="rss" text="安多千山 的收藏" xmlUrl="https://www.douban.com/feed/people/23059233/interests" title="安多千山 的收藏" />
+    <outline type="rss" text="思塵無相 的收藏" xmlUrl="https://www.douban.com/feed/people/cc5832354/interests" title="思塵無相 的收藏" />
+    <outline type="rss" text="无情开评 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/514160575" title="无情开评 的 bilibili 动态" />
+    <outline type="rss" text="智识@IdeoBook™" xmlUrl="http://www.ideobook.com/feed/" title="智识@IdeoBook™" />
+    <outline type="rss" text="Victius 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/27415479" title="Victius 的 bilibili 动态" tags="depth/deep,format/course,mode/practical,structure/series" />
+    <outline type="rss" text="稚晖君 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/20259914" title="稚晖君 的 bilibili 动态" />
+    <outline type="rss" text="豆瓣广播 - Biomass" xmlUrl="https://rsshub.app/douban/people/2790683/status" title="豆瓣广播 - Biomass" />
+    <outline type="rss" text="豆瓣广播 - Decretum" xmlUrl="https://rsshub.app/douban/people/208796275/status" title="豆瓣广播 - Decretum" />
+    <outline type="rss" text="豆瓣广播 - eastvirginia" xmlUrl="https://rsshub.app/douban/people/47049233/status" title="豆瓣广播 - eastvirginia" />
+    <outline type="rss" text="豆瓣广播 - Helicopter" xmlUrl="https://rsshub.app/douban/people/1155157/status" title="豆瓣广播 - Helicopter" />
+    <outline type="rss" text="豆瓣广播 - Mikun" xmlUrl="https://rsshub.app/douban/people/147478630/status" title="豆瓣广播 - Mikun" />
+    <outline type="rss" text="豆瓣广播 - Yige" xmlUrl="https://rsshub.app/douban/people/4854113/status" title="豆瓣广播 - Yige" />
+    <outline type="rss" text="豆瓣广播 - ニコデモ" xmlUrl="https://rsshub.app/douban/people/160782410/status" title="豆瓣广播 - ニコデモ" />
+    <outline type="rss" text="豆瓣广播 - 一台莴苣" xmlUrl="https://rsshub.app/douban/people/178205832/status/readable=1&amp;authorNameBold=1&amp;showAuthorInTitle=1&amp;showAuthorInDesc=1&amp;showAuthorAvatarInDesc=1&amp;showEmojiForRetweet=1&amp;showRetweetTextInTitle=1&amp;addLinkForPics=1&amp;showTimestampInDescription=1&amp;showComments=1&amp;widthOfPics=100" title="豆瓣广播 - 一台莴苣" />
+    <outline type="rss" text="豆瓣广播 - 乔姆斯基脑残粉" xmlUrl="https://rsshub.app/douban/people/184893642/status" title="豆瓣广播 - 乔姆斯基脑残粉" />
+    <outline type="rss" text="豆瓣广播 - 古尔齐亚" xmlUrl="https://rsshub.app/douban/people/1145618/status" title="豆瓣广播 - 古尔齐亚" />
+    <outline type="rss" text="豆瓣广播 - 武川镇的贺六浑" xmlUrl="https://rsshub.app/douban/people/138904689/status/readable=1&amp;authorNameBold=1&amp;showAuthorInTitle=1&amp;showAuthorInDesc=1&amp;showAuthorAvatarInDesc=1&amp;showEmojiForRetweet=1&amp;showRetweetTextInTitle=1&amp;addLinkForPics=1&amp;showTimestampInDescription=1&amp;showComments=1&amp;widthOfPics=100" title="豆瓣广播 - 武川镇的贺六浑" />
+    <outline type="rss" text="豆瓣广播 - 球宝宝" xmlUrl="https://rsshub.app/douban/people/3670119/status/readable=1&amp;authorNameBold=1&amp;showAuthorInTitle=1&amp;showAuthorInDesc=1&amp;showAuthorAvatarInDesc=1&amp;showEmojiForRetweet=1&amp;showRetweetTextInTitle=1&amp;addLinkForPics=1&amp;showTimestampInDescription=1&amp;showComments=1&amp;widthOfPics=100" title="豆瓣广播 - 球宝宝" />
+    <outline type="rss" text="豆瓣广播 - 穆天宁" xmlUrl="https://rsshub.app/douban/people/210348109/status" title="豆瓣广播 - 穆天宁" />
+    <outline type="rss" text="豆瓣广播 - 豆友172547695" xmlUrl="https://rsshub.app/douban/people/172547695/status/readable=1&amp;authorNameBold=1&amp;showAuthorInTitle=1&amp;showAuthorInDesc=1&amp;showAuthorAvatarInDesc=1&amp;showEmojiForRetweet=1&amp;showRetweetTextInTitle=1&amp;addLinkForPics=1&amp;showTimestampInDescription=1&amp;showComments=1&amp;widthOfPics=100" title="豆瓣广播 - 豆友172547695" />
+    <outline type="rss" text="Astral Codex Ten" xmlUrl="https://astralcodexten.substack.com/feed/" title="Astral Codex Ten" />
+    <outline type="rss" text="Edge.org" xmlUrl="https://www.edge.org/feed" title="Edge.org" />
+    <outline type="rss" text="Evolution Institute" xmlUrl="https://evolution-institute.org/feed/" title="Evolution Institute" />
+    <outline type="rss" text="FightMediocrity - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCXLesGEfmyhxqOjoAqhRwhA" title="FightMediocrity - YouTube" />
+    <outline type="rss" text="First Things RSS Feed - First Thoughts" xmlUrl="https://www.firstthings.com/rss/blogs/firstthoughts" title="First Things RSS Feed - First Thoughts" />
+    <outline type="rss" text="First Things RSS Feed - Web Exclusives | Daily Writings From Our Top Writers | First Things" xmlUrl="https://www.firstthings.com/rss/web-exclusives" title="First Things RSS Feed - Web Exclusives | Daily Writings From Our Top Writers | First Things" />
+    <outline type="rss" text="Leithart" xmlUrl="https://www.patheos.com/blogs/leithart/feed/?type=blogs&amp;permalink=leithart" title="Leithart" />
+    <outline type="rss" text="Lessons from the Screenplay - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCErSSa3CaP_GJxmFpdjG9Jw" title="Lessons from the Screenplay - YouTube" />
+    <outline type="rss" text="Marginal Revolution" xmlUrl="https://feeds.feedblitz.com/marginalrevolution&amp;x=1" title="Marginal Revolution" />
+    <outline type="rss" text="New Mind" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC5_Y-BKzq1uW_2rexWkUzlA" title="New Mind" />
+    <outline type="rss" text="Noclip - Video Game Documentaries - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC0fDG3byEcMtbOqPMymDNbw" title="Noclip - Video Game Documentaries - YouTube" />
+    <outline type="rss" text="oftwominds-Charles Hugh Smith" xmlUrl="http://feeds.feedburner.com/google/RzFQ" title="oftwominds-Charles Hugh Smith" />
+    <outline type="rss" text="Palladium" xmlUrl="https://palladiummag.com/feed/" title="Palladium" />
+    <outline type="rss" text="r/complexsystems" xmlUrl="https://www.reddit.com/r/ComplexSystems/best" title="r/complexsystems" />
+    <outline type="rss" text="Replicability-Index" xmlUrl="https://replicationindex.com/feed/" title="Replicability-Index" />
+    <outline type="rss" text="RSS News Releases" xmlUrl="https://www.cato.org/rss/for-media" title="RSS News Releases" />
+    <outline type="rss" text="Science Fictions" xmlUrl="https://stuartritchie.substack.com/feed" title="Science Fictions" />
+    <outline type="rss" text="TED Education" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=TEDEducation&amp;v=2&amp;orderby=published&amp;client=ytapi-youtube-profile" title="TED Education" />
+    <outline type="rss" text="The Art of Improvement" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCtYzVCmNxrshH4_bPO_-Y-A" title="The Art of Improvement" />
+    <outline type="rss" text="The Grumpy Economist" xmlUrl="https://johnhcochrane.blogspot.com/feeds/posts/default?alt=rss" title="The Grumpy Economist" />
+    <outline type="rss" text="The Roots of Progress" xmlUrl="https://rootsofprogress.org/feed.xml" title="The Roots of Progress" />
+    <outline type="rss" text="The Scholar's Stage" xmlUrl="https://scholars-stage.org/feed/" title="The Scholar's Stage" />
+    <outline type="rss" text="West Hunter" xmlUrl="https://westhunt.wordpress.com/feed/" title="West Hunter" />
+    <outline type="rss" text="whig 的收藏" xmlUrl="https://www.douban.com/feed/people/whigzhou/interests" title="whig 的收藏" />
+    <outline type="rss" text="学弱猹的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/liu-li-94-49" title="学弱猹的知乎回答" />
+    <outline type="rss" text="少数派 -- Matrix" xmlUrl="https://rsshub.app/sspai/matrix" title="少数派 -- Matrix" />
+    <outline type="rss" text="张雅宸的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/zhangyachen" title="张雅宸的知乎动态" />
+    <outline type="rss" text="白如冰的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/bai-ru-bing-58" title="白如冰的知乎动态" />
+    <outline type="rss" text="老蒋巨靠谱 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/119801456" title="老蒋巨靠谱 的 bilibili 动态" />
+    <outline type="rss" text="蒙克MK_ 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/1060986358" title="蒙克MK_ 的 bilibili 动态" />
+    <outline type="rss" text="豆瓣广播 - whig" xmlUrl="https://rsshub.app/douban/people/45798665/status" title="豆瓣广播 - whig" />
+    <outline type="rss" text="豆瓣广播 - 瑞鶴" xmlUrl="https://rsshub.app/douban/people/43575863/status" title="豆瓣广播 - 瑞鶴" />
+    <outline type="rss" text="ACCU" xmlUrl="https://accu.org/index.xml" title="ACCU" />
+    <outline type="rss" text="Accidentally in Code" xmlUrl="https://cate.blog/feed/" title="Accidentally in Code" />
+    <outline type="rss" text="Beyondlogic" xmlUrl="https://www.beyondlogic.org/feed/" title="Beyondlogic" />
+    <outline type="rss" text="Brendan Gregg's Blog" xmlUrl="http://www.brendangregg.com/blog/rss.xml" title="Brendan Gregg's Blog" />
+    <outline type="rss" text="Brian Will" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCseUQK4kC3x2x543nHtGpzw" title="Brian Will" />
+    <outline type="rss" text="ChariotSolutions - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCELFqc_PYKA9OOA9ppT5nvg" title="ChariotSolutions - YouTube" />
+    <outline type="rss" text="Chris Done's Blog" xmlUrl="https://chrisdone.com/rss.xml" title="Chris Done's Blog" />
+    <outline type="rss" text="chyyuu’s starred repositories" xmlUrl="https://rsshub.app/github/starred_repos/chyyuu" title="chyyuu’s starred repositories" />
+    <outline type="rss" text="CodePen Blog" xmlUrl="http://blog.codepen.io/feed/" title="CodePen Blog" />
+    <outline type="rss" text="ColdFusion - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC4QZ_LsYcvcq7qOsOhpAX4A" title="ColdFusion - YouTube" tags="depth/medium,structure/misc" />
+    <outline type="rss" text="DKB Blog" xmlUrl="https://dkb.io/rss.xml" title="DKB Blog" tags="depth/deep,mode/practical" />
+    <outline type="rss" text="Novaspirit Tech - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCrjKdwxaQMSV_NDywgKXVmw" title="Novaspirit Tech - YouTube" tags="depth/shallow,mode/practical" />
+    <outline type="rss" text="Joe Collins - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCTfabOKD7Yty6sDF4POBVqA" title="Joe Collins - YouTube" tags="depth/shallow,format/course,mode/practical" />
+    <outline type="rss" text="语虚" xmlUrl="http://feeds.feedburner.com/yyq123-blog" title="语虚" tags="depth/shallow,format/course,mode/practical,structure/series" />
+    <outline type="rss" text="量子位" xmlUrl="https://www.qbitai.com/feed" title="量子位" />
+    <outline type="rss" text="Ele实验室 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/481434238" title="Ele实验室 的 bilibili 动态" tags="depth/medium" />
+    <outline type="rss" text="Kurzgesagt – In a Nutshell - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCsXVk37bltHxD1rDPwtNM8Q" title="Kurzgesagt – In a Nutshell - YouTube" tags="depth/medium" />
+    <outline type="rss" text="Veritasium - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCHnyfMqiRRG1u-2MsSQLbXA" title="Veritasium - YouTube" tags="depth/medium" />
+    <outline type="rss" text="宇正_ 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/74215261" title="宇正_ 的 bilibili 动态" tags="depth/medium,structure/misc" />
+    <outline type="rss" text="龙女之声 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/18706318" title="龙女之声 的 bilibili 动态" tags="depth/shallow" />
+    <outline type="rss" text="Chubbyemu - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCKOvOaJv4GK-oDqx-sj7VVg" title="Chubbyemu - YouTube" tags="depth/shallow" />
+    <outline type="rss" text="Astrum - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC-9b7aDP6ZN0coj9-xFnrtw" title="Astrum - YouTube" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="The Secrets of the Universe - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCK-0srt5hdY5m6Zos_NlJZg" title="The Secrets of the Universe - YouTube" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="芳斯塔芙 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/72270557" title="芳斯塔芙 的 bilibili 动态" />
+    <outline type="rss" text="Kings and Generals - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCMmaBzfCCwZ2KqaBJjkj0fw" title="Kings and Generals - YouTube" tags="depth/deep,format/history,structure/series,topic/history" />
+    <outline type="rss" text="How To Mechatronics" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCmkP178NasnhR3TWQyyP4Gw" title="How To Mechatronics" tags="topic/engineering" />
+    <outline type="rss" text="Undecided with Matt Ferrell - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCjtUS7-SZTi6pXjUbzGHQCg" title="Undecided with Matt Ferrell - YouTube" tags="depth/medium,topic/engineering" />
+    <outline type="rss" text="Jared Owen - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCbsfyGlrjrKQC0gbzK0-EiA" title="Jared Owen - YouTube" tags="depth/medium,topic/engineering" />
+    <outline type="rss" text="Lesics - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCqZQJ4600a9wIfMPbYc60OQ" title="Lesics - YouTube" tags="depth/medium,topic/engineering" />
+    <outline type="rss" text="Physics Videos by Eugene Khutoryansky" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCJ0yBou72Lz9fqeMXh9mkog" title="Physics Videos by Eugene Khutoryansky" tags="depth/medium,topic/engineering" />
+    <outline type="rss" text="Sam Zeloof - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC7E8-0Ou69hwScPW1_fQApA" title="Sam Zeloof - YouTube" tags="depth/medium,topic/engineering" />
+    <outline type="rss" text="Branch Education - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCdp4_l1vPmpN-gDbUwhaRUQ" title="Branch Education - YouTube" tags="depth/deep" />
+    <outline type="rss" text="Practical Engineering - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCMOqf8ab-42UUQIdVoKwjlQ" title="Practical Engineering - YouTube" tags="depth/deep,topic/engineering" />
+    <outline type="rss" text="Brick Experiment Channel" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UClsFdM0HzTdF1JYoraQ0aUw" title="Brick Experiment Channel" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="萌萌战队 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/357669580" title="萌萌战队 的 bilibili 动态" tags="topic/engineering" />
+    <outline type="rss" text="Drew DeVault's blog" xmlUrl="https://drewdevault.com/blog/index.xml" title="Drew DeVault's blog" />
+    <outline type="rss" text="码农高天 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/245645656" title="码农高天 的 bilibili 动态" tags="depth/medium,topic/programming" />
+    <outline type="rss" text="科学认识论 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/94727573" title="科学认识论 的 bilibili 动态" />
+    <outline type="rss" text="Extra Credits - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCCODtTcd5M1JavPCOr_Uydg" title="Extra Credits - YouTube" tags="depth/shallow,format/history,topic/history" />
+    <outline type="rss" text="LGR Blerbs - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCw_Sxdt27ASqErScT4Rlj8A" title="LGR Blerbs - YouTube" tags="depth/shallow,topic/history" />
+    <outline type="rss" text="Epimetheus" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCp9ZtilfKJds0iWytR_pnOQ" title="Epimetheus" tags="depth/shallow,format/history,structure/series,topic/history" />
+    <outline type="rss" text="Andrew Kelley" xmlUrl="https://twitter.com/andy_kelley" title="Andrew Kelley" tags="topic/programming" />
+    <outline type="rss" text="DIYgod" xmlUrl="https://diygod.me/atom.xml" title="DIYgod" tags="topic/programming" />
+    <outline type="rss" text="FP -&gt; Compilers -&gt; Logic -&gt; Blog" xmlUrl="https://luctielen.com/atom.xml" title="FP -&gt; Compilers -&gt; Logic -&gt; Blog" tags="topic/programming" />
+    <outline type="rss" text="furbo.org" xmlUrl="https://furbo.org/feed/json" title="furbo.org" tags="topic/programming" />
+    <outline type="rss" text="Game Maker's Toolkit" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCqJ-Xo29CKyLTjn6z2XwYAw" title="Game Maker's Toolkit" tags="topic/programming" />
+    <outline type="rss" text="Gamker攻壳 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/13297724" title="Gamker攻壳 的 bilibili 动态" tags="topic/programming" />
+    <outline type="rss" text="gashero的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/gashero" title="gashero的知乎回答" tags="topic/programming" />
+    <outline type="rss" text="JWillikers" xmlUrl="https://www.jwillikers.com/feed.xml" title="JWillikers" tags="topic/programming" />
+    <outline type="rss" text="LCLDIY 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/358732547" title="LCLDIY 的 bilibili 动态" tags="topic/programming" />
+    <outline type="rss" text="Lobsters: reversing - Reverse engineering" xmlUrl="https://lobste.rs/t/reversing.rss" title="Lobsters: reversing - Reverse engineering" tags="topic/programming" />
+    <outline type="rss" text="Lobsters: rust - Rust programming" xmlUrl="https://lobste.rs/t/rust.rss" title="Lobsters: rust - Rust programming" tags="topic/programming" />
+    <outline type="rss" text="Lobsters: unix - *nix" xmlUrl="https://lobste.rs/t/unix.rss" title="Lobsters: unix - *nix" tags="topic/programming" />
+    <outline type="rss" text="Maurice Parker" xmlUrl="https://vincode.io/feed.xml" title="Maurice Parker" tags="topic/programming" />
+    <outline type="rss" text="The 8-Bit Guy - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC8uT9cgJorJPWu7ITLGo9Ww" title="The 8-Bit Guy - YouTube" tags="topic/programming" />
+    <outline type="rss" text="VALSE_Webinar 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/562085182" title="VALSE_Webinar 的 bilibili 动态" tags="topic/programming" />
+    <outline type="rss" text="Hacker News Daily" xmlUrl="https://www.daemonology.net/hn-daily/index.rss" title="Hacker News Daily" tags="depth/medium,topic/programming" />
+    <outline type="rss" text="invalid s的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/s.invalid" title="invalid s的知乎回答" tags="depth/medium,structure/misc,topic/programming" />
+    <outline type="rss" text="老石谈芯 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/612932327" title="老石谈芯 的 bilibili 动态" tags="depth/medium,structure/misc,topic/programming" />
+    <outline type="rss" text="fengmuzi2003 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/305597775" title="fengmuzi2003 的 bilibili 动态" tags="depth/deep,format/course,mode/practical,topic/programming" />
+    <outline type="rss" text="Tales" xmlUrl="https://tales.mbivert.com/index.xml" title="Tales" tags="depth/deep,mode/practical,topic/programming" />
+    <outline type="rss" text="Hacker News: Best" xmlUrl="https://hnrss.org/best" title="Hacker News: Best" tags="depth/deep,format/filter,mode/practical,topic/programming" />
+    <outline type="rss" text="chyyuu's GitHub repositories" xmlUrl="https://rsshub.app/github/repos/chyyuu" title="chyyuu's GitHub repositories" tags="depth/deep,format/project,mode/practical,topic/programming" />
+    <outline type="rss" text="Lobsters: formalmethods - Formal methods" xmlUrl="https://lobste.rs/t/formalmethods.rss" title="Lobsters: formalmethods - Formal methods" tags="depth/deep,format/filter,mode/practical,structure/series,topic/programming" />
+    <outline type="rss" text="Lobsters: linux - Linux" xmlUrl="https://lobste.rs/t/linux.rss" title="Lobsters: linux - Linux" tags="depth/shallow,mode/practical,structure/misc,topic/programming" />
+    <outline type="rss" text="韦易笑的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/skywind3000" title="韦易笑的知乎动态" tags="topic/programming" />
+    <outline type="rss" text="Daniel Mangum" xmlUrl="https://danielmangum.com/index.xml" title="Daniel Mangum" tags="topic/programming" />
+    <outline type="rss" text="Renato Athaydes Blog" xmlUrl="https://renato.athaydes.com/news/index.xml" title="Renato Athaydes Blog" tags="topic/programming" />
+    <outline type="rss" text="Sutter’s Mill" xmlUrl="https://herbsutter.com/feed/" title="Sutter’s Mill" tags="topic/programming" />
+    <outline type="rss" text="云风的 BLOG" xmlUrl="https://blog.codingnow.com/index.xml" title="云风的 BLOG" tags="depth/medium,topic/programming" />
+    <outline type="rss" text="Creel" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCq7dxy_qYNEBcHqQVCbc20w" title="Creel" tags="depth/medium,topic/programming" />
+    <outline type="rss" text="Lobsters: compilers - Compiler design" xmlUrl="https://lobste.rs/t/compilers.rss" title="Lobsters: compilers - Compiler design" tags="depth/medium,format/filter,topic/programming" />
+    <outline type="rss" text="code_report - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC1kBxkk2bcG78YBX7LMl9pQ" title="code_report - YouTube" tags="depth/medium,topic/programming" />
+    <outline type="rss" text="Computer Science" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCSX3MR0gnKDxyXAyljWzm0Q" title="Computer Science" tags="depth/medium,mode/practical,topic/programming" />
+    <outline type="rss" text="Lobsters: plt - Programming language theory, types, design" xmlUrl="https://lobste.rs/t/plt.rss" title="Lobsters: plt - Programming language theory, types, design" tags="depth/medium,format/filter,mode/practical,topic/programming" />
+    <outline type="rss" text="Lobsters: compsci - Other computer science/programming" xmlUrl="https://lobste.rs/t/compsci.rss" title="Lobsters: compsci - Other computer science/programming" tags="depth/medium,format/filter,mode/practical,topic/programming" />
+    <outline type="rss" text="The Cherno - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCQ-W1KE9EYfdxhL6S4twUNw" title="The Cherno - YouTube" tags="depth/medium,mode/practical,structure/series,topic/programming" />
+    <outline type="rss" text="CoffeeBeforeArch - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCsi5-meDM5Q5NE93n_Ya7GA" title="CoffeeBeforeArch - YouTube" tags="depth/medium,format/course,mode/practical,structure/series,topic/programming" />
+    <outline type="rss" text="我叫小骨头 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/37113937" title="我叫小骨头 的 bilibili 动态" tags="topic/programming" />
+    <outline type="rss" text="散深-编程沉思录" xmlUrl="https://www.cyhone.com/atom.xml" title="散深-编程沉思录" tags="topic/programming" />
+    <outline type="rss" text="Eternity的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/AlbertRen" title="Eternity的知乎动态" tags="depth/deep" />
+    <outline type="rss" text="Computerphile - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC9-y-6csu5WGm29I7JiwpnA" title="Computerphile - YouTube" tags="depth/deep,topic/programming" />
+    <outline type="rss" text="Faultlore" xmlUrl="https://faultlore.com/blah/rss.xml" title="Faultlore" tags="depth/deep,mode/practical,topic/programming" />
+    <outline type="rss" text="Zig NEWS" xmlUrl="https://zig.news/feed" title="Zig NEWS" tags="depth/deep,mode/practical,topic/programming" />
+    <outline type="rss" text="Lobsters Daily" xmlUrl="https://feedpress.me/lobsters-daily" title="Lobsters Daily" tags="depth/deep,format/filter,mode/practical,topic/programming" />
+    <outline type="rss" text="1024cores" xmlUrl="http://feeds.feedburner.com/1024cores" title="1024cores" tags="depth/deep,mode/practical,structure/series,topic/programming" />
+    <outline type="rss" text="绿导师原谅你了 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/202224425" title="绿导师原谅你了 的 bilibili 动态" tags="depth/deep,format/course,mode/practical,structure/series,topic/programming" />
+    <outline type="rss" text="AdamW on Linux and more" xmlUrl="https://www.happyassassin.net/rss.xml" title="AdamW on Linux and more" tags="depth/shallow,topic/programming" />
+    <outline type="rss" text="Matt Godbolt’s blog" xmlUrl="https://xania.org/feed.atom" title="Matt Godbolt’s blog" tags="depth/shallow,structure/misc,topic/programming" />
+    <outline type="rss" text="诟屍" xmlUrl="https://goushi.me/feed/" title="诟屍" tags="topic/programming" />
+    <outline type="rss" text="面向信仰编程" xmlUrl="https://draveness.me/feed.xml" title="面向信仰编程" tags="topic/programming" />
+    <outline type="rss" text="🏠 on Viacheslav Biriukov" xmlUrl="https://biriukov.dev/index.xml" title="🏠 on Viacheslav Biriukov" tags="topic/programming" />
+    <outline type="rss" text="跟李沐学AI 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/1567748478" title="跟李沐学AI 的 bilibili 动态" tags="depth/deep,structure/series,topic/ai,topic/programming" />
+    <outline type="rss" text="Distill" xmlUrl="https://distill.pub/rss.xml" title="Distill" tags="depth/deep,mode/practical,topic/ai,topic/programming" />
+    <outline type="rss" text="OpenAI" xmlUrl="https://openai.com/blog/rss/" title="OpenAI" tags="depth/deep,mode/practical,topic/ai,topic/programming" />
+    <outline type="rss" text="Lil'Log" xmlUrl="https://lilianweng.github.io/index.xml" title="Lil'Log" tags="depth/deep,mode/practical,structure/series,topic/ai,topic/programming" />
+    <outline type="rss" text="deep_thoughts 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/373596439" title="deep_thoughts 的 bilibili 动态" tags="depth/deep,format/course,mode/practical,structure/series,topic/ai,topic/programming" />
+    <outline type="rss" text="Mike X Cohen" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCUR_LsXk7IYyueSnXcNextQ" title="Mike X Cohen" tags="depth/deep,format/course,mode/practical,structure/series,topic/ai,topic/programming" />
+    <outline type="rss" text="stacksmashing" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC3S8vxwRfqLBdIhgRlDRVzw" title="stacksmashing" tags="depth/shallow,structure/misc,topic/ai,topic/programming" />
+    <outline type="rss" text="科学空间|Scientific Spaces" xmlUrl="https://spaces.ac.cn/feed" title="科学空间|Scientific Spaces" tags="topic/ai,topic/programming" />
+    <outline type="rss" text="Zach Star - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCpCSAcbqs-sjEVfk_hMfY9w" title="Zach Star - YouTube" tags="depth/medium,topic/algorithms,topic/programming" />
+    <outline type="rss" text="YouTube channel UCm_dHxrHKK_fmoUgj9YnYqw" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCm_dHxrHKK_fmoUgj9YnYqw" title="YouTube channel UCm_dHxrHKK_fmoUgj9YnYqw" tags="depth/deep,topic/algorithms,topic/programming" />
+    <outline type="rss" text="Reducible - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCK8XIGR5kRidIw2fWqwyHRA" title="Reducible - YouTube" tags="depth/deep,topic/algorithms,topic/programming" />
+    <outline type="rss" text="udiprod - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCcf4LQogGFtYzPhq05uHE4g" title="udiprod - YouTube" tags="depth/deep,topic/algorithms,topic/programming" />
+    <outline type="rss" text="Project Euler" xmlUrl="https://projecteuler.net/rss2_euler.xml" title="Project Euler" tags="depth/deep,format/exercise,mode/practical,structure/series,topic/algorithms,topic/programming" />
+    <outline type="rss" text="Rong晔 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/3280670" title="Rong晔 的 bilibili 动态" tags="topic/electronics" />
+    <outline type="rss" text="Sam Zeloof" xmlUrl="http://sam.zeloof.xyz/feed/" title="Sam Zeloof" tags="topic/electronics" />
+    <outline type="rss" text="The CPU Shack Museum" xmlUrl="http://www.cpushack.com/feed/" title="The CPU Shack Museum" tags="depth/medium,format/history,topic/electronics" />
+    <outline type="rss" text="小梅哥爱漂流 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/476579378" title="小梅哥爱漂流 的 bilibili 动态" tags="topic/electronics" />
+    <outline type="rss" text="Twitter @Atomic Semi" xmlUrl="https://rsshub.app/twitter/user/atomic_semi" title="Twitter @Atomic Semi" tags="depth/deep,topic/electronics" />
+    <outline type="rss" text="Agner's CPU blog" xmlUrl="https://www.agner.org/forum/app.php/feed" title="Agner's CPU blog" tags="depth/deep,mode/practical,topic/electronics" />
+    <outline type="rss" text="KuangjuX(狂且)" xmlUrl="http://blog.kuangjux.top/atom.xml" title="KuangjuX(狂且)" tags="depth/deep,mode/practical" />
+    <outline type="rss" text="Ken Shirriff's blog" xmlUrl="http://www.righto.com/feeds/posts/default?alt=rss" title="Ken Shirriff's blog" tags="depth/deep,mode/practical,structure/series,topic/electronics" />
+    <outline type="rss" text="The ZipCPU by Gisselquist Technology" xmlUrl="https://zipcpu.com/feed.xml" title="The ZipCPU by Gisselquist Technology" tags="depth/deep,mode/practical,structure/series,topic/electronics" />
+    <outline type="rss" text="FPGA made Easy" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCkHnngw4Sq29VOpqVTUZWGQ" title="FPGA made Easy" tags="depth/deep,format/course,mode/practical,structure/series,topic/electronics" />
+    <outline type="rss" text="nandland" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCsdA-aNqtMA1_2T15aXePWw" title="nandland" tags="depth/deep,format/course,mode/practical,structure/series,topic/electronics" />
+    <outline type="rss" text="Robert Baruch" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCBcljXmuXPok9kT_VGA3adg" title="Robert Baruch" tags="depth/deep,format/project,mode/practical,structure/series,topic/electronics" />
+    <outline type="rss" text="SiFive" xmlUrl="https://www.sifive.com/feed.xml" title="SiFive" tags="depth/shallow,topic/electronics" />
+    <outline type="rss" text="业余蚊子 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/2732704" title="业余蚊子 的 bilibili 动态" tags="topic/graphics,topic/programming" />
+    <outline type="rss" text="循迹研究室" xmlUrl="https://imzlp.com/atom.xml" title="循迹研究室" tags="topic/graphics,topic/programming" />
+    <outline type="rss" text="文刀秋二的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/edliu" title="文刀秋二的知乎动态" tags="topic/graphics,topic/programming" />
+    <outline type="rss" text="Lobsters: graphics - Graphics programming" xmlUrl="https://lobste.rs/t/graphics.rss" title="Lobsters: graphics - Graphics programming" tags="depth/deep,format/filter,topic/graphics,topic/programming" />
+    <outline type="rss" text="刀客儿解说 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/10297219" title="刀客儿解说 的 bilibili 动态" tags="depth/deep,topic/graphics,topic/programming" />
+    <outline type="rss" text="cbloom rants" xmlUrl="http://cbloomrants.blogspot.com/feeds/posts/default" title="cbloom rants" tags="depth/deep,mode/practical,topic/graphics,topic/programming" />
+    <outline type="rss" text="Riser 的知乎文章" xmlUrl="https://rsshub.app/zhihu/posts/people/sao-de-yi-pi-64" title="Riser 的知乎文章" tags="depth/deep,mode/practical,topic/graphics,topic/programming" />
+    <outline type="rss" text="The ryg blog" xmlUrl="https://fgiesen.wordpress.com/feed/" title="The ryg blog" tags="depth/deep,mode/practical,topic/graphics,topic/programming" />
+    <outline type="rss" text="0向往0" xmlUrl="https://feed.cnblogs.com/blog/u/496662/rss/" title="0向往0" tags="depth/deep,mode/practical,structure/series,topic/graphics,topic/programming" />
+    <outline type="rss" text="Behind the Pixels" xmlUrl="http://behindthepixels.io/feed.xml" title="Behind the Pixels" tags="depth/deep,mode/practical,structure/series,topic/graphics,topic/programming" />
+    <outline type="rss" text="计算机图形学与混合现实online platform" xmlUrl="http://games-cn.org/feed/" title="计算机图形学与混合现实online platform" tags="depth/deep,format/course,mode/practical,structure/series,topic/programming" />
+    <outline type="rss" text="孔令德 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/486651102" title="孔令德 的 bilibili 动态" tags="depth/deep,format/project,mode/practical,structure/series,topic/programming" />
+    <outline type="rss" text="丛越的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/li-xiang-da-sheng" title="丛越的知乎动态" tags="depth/deep,mode/practical,structure/misc,topic/graphics,topic/programming" />
+    <outline type="rss" text="Video Game Animation Study - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC8A3Zig-dNx2kZmy1FovTEA" title="Video Game Animation Study - YouTube" tags="depth/shallow,structure/misc,topic/graphics,topic/programming" />
+    <outline type="rss" text="虚幻社区知识库" xmlUrl="https://ue5wiki.com/atom.xml" title="虚幻社区知识库" tags="topic/graphics,topic/programming" />
+    <outline type="rss" text="DecodeZ" xmlUrl="https://decodezp.github.io/atom.xml" title="DecodeZ" tags="topic/hardware" />
+    <outline type="rss" text="Two-Bit History" xmlUrl="https://twobithistory.org/feed.xml" title="Two-Bit History" tags="topic/hardware" />
+    <outline type="rss" text="Blog on Asahi Linux" xmlUrl="https://asahilinux.org/blog/index.xml" title="Blog on Asahi Linux" tags="depth/medium,topic/hardware" />
+    <outline type="rss" text="PowerCert Animated Videos" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCJQJ4GjTiq5lmn8czf8oo0Q" title="PowerCert Animated Videos" tags="depth/medium" />
+    <outline type="rss" text="TechTechPotato" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC1r0DG-KEPyqOeW6o79PByw" title="TechTechPotato" tags="depth/medium,mode/practical,topic/hardware" />
+    <outline type="rss" text="SIGARCH" xmlUrl="https://www.sigarch.org/feed/" title="SIGARCH" tags="depth/deep,mode/practical,topic/hardware" />
+    <outline type="rss" text="linusw" xmlUrl="https://people.kernel.org/linusw/feed/" title="linusw" tags="depth/deep,mode/practical,structure/series" />
+    <outline type="rss" text="Ben Eater" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCS0N5baNlQWJCUrhCEo8WlA" title="Ben Eater" tags="depth/deep,format/course,mode/practical,structure/series" />
+    <outline type="rss" text="yaaangmin 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/4564101" title="yaaangmin 的 bilibili 动态" tags="depth/deep,format/course,mode/practical,structure/series" />
+    <outline type="rss" text="极客湾Geekerwan 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/25876945" title="极客湾Geekerwan 的 bilibili 动态" tags="depth/shallow,structure/misc,topic/hardware" />
+    <outline type="rss" text="谭玉刚 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/41036636" title="谭玉刚 的 bilibili 动态" tags="topic/hardware" />
+    <outline type="rss" text="Jason's Website" xmlUrl="http://www.lowepower.com/jason/feeds/all.atom.xml" title="Jason's Website" tags="topic/programming,topic/systems" />
+    <outline type="rss" text="Tony Zhang" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCabBd1g8nBWWCx2YT4yeXOA" title="Tony Zhang" tags="topic/programming,topic/systems" />
+    <outline type="rss" text="Tony1324's GitHub repositories" xmlUrl="https://rsshub.app/github/repos/Tony1324" title="Tony1324's GitHub repositories" tags="topic/programming,topic/systems" />
+    <outline type="rss" text="Learn Linux TV - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCxQKHvKbmSzGMvUrVtJYnUA" title="Learn Linux TV - YouTube" tags="depth/medium,format/course,structure/series,topic/programming,topic/systems" />
+    <outline type="rss" text="奇乐编程学院 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/372313671" title="奇乐编程学院 的 bilibili 动态" tags="depth/deep,topic/programming,topic/systems" />
+    <outline type="rss" text="World of BS" xmlUrl="https://www.worldofbs.com/rss.xml" title="World of BS" tags="depth/deep,topic/programming,topic/systems" />
+    <outline type="rss" text="lazyparser 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/296494084" title="lazyparser 的 bilibili 动态" tags="depth/deep,format/course,mode/practical,structure/series,topic/programming,topic/systems" />
+    <outline type="rss" text="saminiir's hacker blog" xmlUrl="https://www.saminiir.com/feed.xml" title="saminiir's hacker blog" tags="depth/deep,format/project,mode/practical,structure/series,topic/programming,topic/systems" />
+    <outline type="rss" text="The Architecture of Open Source Applications: The Blog" xmlUrl="http://aosabook.org/blog/feeds/all.atom.xml" title="The Architecture of Open Source Applications: The Blog" tags="topic/os,topic/programming" />
+    <outline type="rss" text="The Adventures of OS" xmlUrl="https://osblog.stephenmarz.com/feed.rss" title="The Adventures of OS" tags="depth/deep,format/project,mode/practical,structure/series,topic/os,topic/programming" />
+    <outline type="rss" text="Kernotex - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCFajCKBeNRW16Xb5mJvrCvw" title="Kernotex - YouTube" tags="depth/shallow,format/course,mode/practical,structure/series,topic/os,topic/programming" />
+    <outline type="rss" text="Preshing on Programming" xmlUrl="https://preshing.com/feed" title="Preshing on Programming" tags="topic/programming" />
+    <outline type="rss" text="Project Zero" xmlUrl="https://googleprojectzero.blogspot.com/feeds/posts/default" title="Project Zero" tags="topic/programming,topic/security" />
+    <outline type="rss" text="Murtaza's Workshop - Robotics and AI - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCYUjYU5FveRAscQ8V21w81A" title="Murtaza's Workshop - Robotics and AI - YouTube" tags="topic/visualization" />
+    <outline type="rss" text="mileistone's blog" xmlUrl="https://mileistone.github.io/feed.xml" title="mileistone's blog" tags="depth/medium,structure/misc,topic/visualization" />
+    <outline type="rss" text="Jay Alammar" xmlUrl="http://jalammar.github.io/feed.xml" title="Jay Alammar" tags="depth/deep,mode/practical,structure/series,topic/visualization" />
+    <outline type="rss" text="All Things Linguistic" xmlUrl="https://allthingslinguistic.com/feed" title="All Things Linguistic" tags="topic/language" />
+    <outline type="rss" text="Articulatum的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/articulatum" title="Articulatum的知乎回答" tags="topic/language" />
+    <outline type="rss" text="Artifexian - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCeh-pJYRZTBJDXMNZeWSUVA" title="Artifexian - YouTube" tags="topic/language" />
+    <outline type="rss" text="Biblaridion - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCMjTcpv56G_W0FRIdPHBn4A" title="Biblaridion - YouTube" tags="topic/language" />
+    <outline type="rss" text="Brahamowski 的收藏" xmlUrl="https://www.douban.com/feed/people/xia_zi_yang/interests" title="Brahamowski 的收藏" tags="topic/language" />
+    <outline type="rss" text="Dinge Erklärt – Kurzgesagt - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCwRH985XgMYXQ6NxXDo8npw" title="Dinge Erklärt – Kurzgesagt - YouTube" tags="topic/language" />
+    <outline type="rss" text="Ecolinguist" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UChqLwfp3eAkAwX9DGnqr_CA" title="Ecolinguist" tags="topic/language" />
+    <outline type="rss" text="Gretchen McCulloch" xmlUrl="https://gretchenmcculloch.com/feed/" title="Gretchen McCulloch" tags="topic/language" />
+    <outline type="rss" text="Langfocus - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCNhX3WQEkraW3VHPyup8jkQ" title="Langfocus - YouTube" tags="topic/language" />
+    <outline type="rss" text="Language Log" xmlUrl="https://languagelog.ldc.upenn.edu/nll/?feed=rss2" title="Language Log" tags="topic/language" />
+    <outline type="rss" text="Lingthusiasm - A podcast that's enthusiastic about linguistics" xmlUrl="http://feeds.soundcloud.com/users/soundcloud:users:237055046/sounds.rss" title="Lingthusiasm - A podcast that's enthusiastic about linguistics" tags="topic/language" />
+    <outline type="rss" text="Love Learning Languages" xmlUrl="https://lovelearninglanguages966218451.wordpress.com/feed/" title="Love Learning Languages" tags="topic/language" />
+    <outline type="rss" text="msoeg的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/msoeg" title="msoeg的知乎回答" tags="topic/language" />
+    <outline type="rss" text="NativLang" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCMk_WSPy3EE16aK5HLzCJzw" title="NativLang" tags="topic/language" />
+    <outline type="rss" text="PeopleOfAr" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCdKvLuJkGFmpRM-pM4sWgog" title="PeopleOfAr" tags="topic/language" />
+    <outline type="rss" text="PeopleOfAr" xmlUrl="https://www.peopleofar.com/feed/" title="PeopleOfAr" tags="topic/language" />
+    <outline type="rss" text="polyhedron的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/polyhedron" title="polyhedron的知乎回答" tags="topic/language" />
+    <outline type="rss" text="polýMATHY - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCLbiwlm3poGNh5XSVlXBkGA" title="polýMATHY - YouTube" tags="topic/language" />
+    <outline type="rss" text="Sight Words: Teach Your Child to Read" xmlUrl="https://sightwords.com/feed/" title="Sight Words: Teach Your Child to Read" tags="topic/language" />
+    <outline type="rss" text="Study of Antiquity and the Middle Ages - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCxRSpkGOH_09pxKvgD8S5jQ" title="Study of Antiquity and the Middle Ages - YouTube" tags="topic/language" />
+    <outline type="rss" text="Superlinguo" xmlUrl="https://www.superlinguo.com/rss" title="Superlinguo" tags="topic/language" />
+    <outline type="rss" text="Xidnaf" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCByBOwwOU5tKddYpsrHiUUw" title="Xidnaf" tags="topic/language" />
+    <outline type="rss" text="思無邪SyiMyuZya的知乎想法" xmlUrl="https://rsshub.app/zhihu/people/pins/syimyuzya" title="思無邪SyiMyuZya的知乎想法" tags="topic/language" />
+    <outline type="rss" text="成湯咸的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/wei-zi-18-40" title="成湯咸的知乎回答" tags="topic/language" />
+    <outline type="rss" text="朴益顺安的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/pu-yi-shun-an" title="朴益顺安的知乎回答" tags="topic/language" />
+    <outline type="rss" text="知乎动态 xiao-yi-ke-10" xmlUrl="https://rsshub.app/zhihu/people/activities/xiao-yi-ke-10" title="知乎动态 xiao-yi-ke-10" tags="topic/language" />
+    <outline type="rss" text="神晶的知乎回答" xmlUrl="https://rsshub.app/zhihu/people/answers/Synacrystal" title="神晶的知乎回答" tags="topic/language" />
+    <outline type="rss" text="笑也的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/xiao-ye-74-28-9" title="笑也的知乎动态" tags="topic/language" />
+    <outline type="rss" text="绯索卡 · Phesoca" xmlUrl="https://phesoca.com/feed/" title="绯索卡 · Phesoca" tags="topic/language" />
+    <outline type="rss" text="AJ Guillon" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCGLVtqLi7__df0tZkJQDqYg" title="AJ Guillon" tags="format/course" />
+    <outline type="rss" text="AlgoCasts" xmlUrl="https://rsshub.app/algocasts" title="AlgoCasts" tags="format/course" />
+    <outline type="rss" text="Brady Africk" xmlUrl="https://twitter.com/bradyafr" title="Brady Africk" tags="format/course" />
+    <outline type="rss" text="buildwithpython" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCirPbvoHzD78Lnyll6YYUpg" title="buildwithpython" tags="format/course" />
+    <outline type="rss" text="Circuit Basics" xmlUrl="http://www.circuitbasics.com/feed/" title="Circuit Basics" tags="format/course" />
+    <outline type="rss" text="Classical Mythology" xmlUrl="https://twitter.com/ClassicalMyths" title="Classical Mythology" tags="format/course" />
+    <outline type="rss" text="Embedded Systems with ARM Cortex-M Microcontrollers in Assembly Language and C - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCY0sQ9hpSR6yZobt1qOv6DA" title="Embedded Systems with ARM Cortex-M Microcontrollers in Assembly Language and C - YouTube" tags="format/course" />
+    <outline type="rss" text="Gateway IT Tutorials" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCC3NktjU1zEib8hJoEAxiDA" title="Gateway IT Tutorials" tags="format/course" />
+    <outline type="rss" text="Geek's Lesson" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCKXx22vOENUyHrVAADq7Z_g" title="Geek's Lesson" tags="format/course" />
+    <outline type="rss" text="HACKADAY" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCnv0gfLQFNGPJ5MHSGuIAkw" title="HACKADAY" tags="format/course" />
+    <outline type="rss" text="Kamil Galeev" xmlUrl="https://twitter.com/kamilkazani" title="Kamil Galeev" tags="format/course" />
+    <outline type="rss" text="Michael Kofman" xmlUrl="https://twitter.com/KofmanMichael" title="Michael Kofman" tags="format/course" />
+    <outline type="rss" text="My CS" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCq8JbYayUHvKvjimPV0TCqQ" title="My CS" tags="format/course" />
+    <outline type="rss" text="Novaspirit" xmlUrl="https://www.novaspirit.com/feed/" title="Novaspirit" tags="format/course" />
+    <outline type="rss" text="Professor Messer" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCkefXKtInZ9PLsoGRtml2FQ" title="Professor Messer" tags="format/course" />
+    <outline type="rss" text="Programming with Mosh" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCWv7vMbMWH4-V0ZXdmDpPBA" title="Programming with Mosh" tags="format/course" />
+    <outline type="rss" text="三日月やよい" xmlUrl="https://twitter.com/Willoug60125499" title="三日月やよい" tags="format/course" />
+    <outline type="rss" text="Academind" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCSJbGtTlrDami-tDGPUV9-w" title="Academind" tags="depth/shallow,format/course,mode/practical" />
+    <outline type="rss" text="Brackeys" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCYbK_tjZ2OrIZFBvU6CCMiA" title="Brackeys" tags="depth/shallow,topic/games" />
+    <outline type="rss" text="Leya蕾雅 - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCiXJjvsRQEyT06x3YUwueVw" title="Leya蕾雅 - YouTube" tags="depth/shallow,structure/misc,topic/games" />
+    <outline type="rss" text="Ahoy" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCE1jXbVAGJQEORz9nZqb5bQ" title="Ahoy" />
+    <outline type="rss" text="Ai&amp;Society – 集智俱乐部" xmlUrl="https://swarma.org/?feed=rss2&amp;special=aisociety" title="Ai&amp;Society – 集智俱乐部" />
+    <outline type="rss" text="Coding Horror" xmlUrl="https://blog.codinghorror.com/rss/" title="Coding Horror" />
+    <outline type="rss" text="CppCast" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCuCjADS4u3uJDTqUaG0H9dA" title="CppCast" />
+    <outline type="rss" text="Darrien's technical blog" xmlUrl="https://blog.darrien.dev/index.xml" title="Darrien's technical blog" />
+    <outline type="rss" text="Eli Bendersky's website" xmlUrl="https://eli.thegreenplace.net/feeds/all.atom.xml" title="Eli Bendersky's website" />
+    <outline type="rss" text="Engraved" xmlUrl="https://www.engraved.blog/rss/" title="Engraved" />
+    <outline type="rss" text="Explanations" xmlUrl="https://magcius.github.io/xplain/article/feed.xml" title="Explanations" />
+    <outline type="rss" text="Gopher Academy - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCx9QVEApa5BKLw9r8cnOFEA" title="Gopher Academy - YouTube" />
+    <outline type="rss" text="Ham Vocke" xmlUrl="https://www.hamvocke.com/feed.xml" title="Ham Vocke" />
+    <outline type="rss" text="Handmade Seattle" xmlUrl="https://media.handmade-seattle.com/rss/" title="Handmade Seattle" />
+    <outline type="rss" text="Haoyi's Programming Blog" xmlUrl="https://www.lihaoyi.com/feed.xml" title="Haoyi's Programming Blog" />
+    <outline type="rss" text="Ilya's blog" xmlUrl="https://ilya-sher.org/feed/" title="Ilya's blog" />
+    <outline type="rss" text="Infrequently Noted" xmlUrl="https://infrequently.org/feed/" title="Infrequently Noted" />
+    <outline type="rss" text="isrc-cas's GitHub repositories" xmlUrl="https://rsshub.app/github/repos/isrc-cas" title="isrc-cas's GitHub repositories" />
+    <outline type="rss" text="IT Hare on Soft.ware" xmlUrl="http://ithare.com/rssfeed/" title="IT Hare on Soft.ware" />
+    <outline type="rss" text="Jacob’s Blog" xmlUrl="https://g-w1.github.io/blog/feed.xml" title="Jacob’s Blog" />
+    <outline type="rss" text="Jakub Konka" xmlUrl="http://feeds.feedburner.com/kubkon" title="Jakub Konka" />
+    <outline type="rss" text="Julia Evans" xmlUrl="https://jvns.ca/atom.xml" title="Julia Evans" />
+    <outline type="rss" text="Just Software Solutions Blog" xmlUrl="https://www.justsoftwaresolutions.co.uk/index.rss" title="Just Software Solutions Blog" />
+    <outline type="rss" text="Kornelski Atom" xmlUrl="https://kornel.ski/pornelski.atom" title="Kornelski Atom" />
+    <outline type="rss" text="Loris Cro's Personal Website" xmlUrl="https://kristoff.it/index.xml" title="Loris Cro's Personal Website" />
+    <outline type="rss" text="Low Level Bits 🇺🇦 on Low Level Bits 🇺🇦" xmlUrl="https://lowlevelbits.org/atom.xml" title="Low Level Bits 🇺🇦 on Low Level Bits 🇺🇦" />
+    <outline type="rss" text="Low Level Learning - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC6biysICWOJ-C3P4Tyeggzg" title="Low Level Learning - YouTube" />
+    <outline type="rss" text="Michael Brundage" xmlUrl="https://michaelbrundage.com/atom.xml" title="Michael Brundage" />
+    <outline type="rss" text="Motiejus Jakštys Public Record" xmlUrl="https://jakstys.lt/rss.xml" title="Motiejus Jakštys Public Record" />
+    <outline type="rss" text="Musing Mortoray" xmlUrl="https://mortoray.com/feed/" title="Musing Mortoray" />
+    <outline type="rss" text="NeoSmart Knowledgebase" xmlUrl="https://neosmart.net/wiki/feed/" title="NeoSmart Knowledgebase" />
+    <outline type="rss" text="Oil Shell Blog" xmlUrl="https://twitter.com/oilshellblog" title="Oil Shell Blog" />
+    <outline type="rss" text="OS/2 Museum" xmlUrl="https://www.os2museum.com/wp/feed/" title="OS/2 Museum" />
+    <outline type="rss" text="Phil Pearl's Blog" xmlUrl="https://philpearl.github.io/index.xml" title="Phil Pearl's Blog" />
+    <outline type="rss" text="Programming in the 21st Century" xmlUrl="https://prog21.dadgum.com//atom.xml" title="Programming in the 21st Century" />
+    <outline type="rss" text="Random ASCII – tech blog of Bruce Dawson" xmlUrl="https://randomascii.wordpress.com/feed/" title="Random ASCII – tech blog of Bruce Dawson" />
+    <outline type="rss" text="Ratfactor Feed" xmlUrl="http://ratfactor.com/atom.xml" title="Ratfactor Feed" />
+    <outline type="rss" text="ROBOTIC ELECTRONICS" xmlUrl="https://roboticelectronics.in/feed/" title="ROBOTIC ELECTRONICS" />
+    <outline type="rss" text="Ruben Verborgh's blog" xmlUrl="https://ruben.verborgh.org/blog/latest.xml" title="Ruben Verborgh's blog" />
+    <outline type="rss" text="Russell Cohen" xmlUrl="https://rcoh.me/index.xml" title="Russell Cohen" />
+    <outline type="rss" text="Scattered Thoughts" xmlUrl="https://www.scattered-thoughts.net/atom.xml" title="Scattered Thoughts" />
+    <outline type="rss" text="Scott Hanselman's Blog" xmlUrl="http://feeds.hanselman.com/ScottHanselman" title="Scott Hanselman's Blog" />
+    <outline type="rss" text="Semiconductor Engineering - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC2LCc4VvMYj-6Kqe09avwow" title="Semiconductor Engineering - YouTube" />
+    <outline type="rss" text="Shtetl-Optimized" xmlUrl="https://scottaaronson.blog/?feed=rss2" title="Shtetl-Optimized" />
+    <outline type="rss" text="SmartVania" xmlUrl="https://smartvania.com/feed/" title="SmartVania" />
+    <outline type="rss" text="sunfishcode's blog" xmlUrl="https://blog.sunfishcode.online/atom.xml" title="sunfishcode's blog" />
+    <outline type="rss" text="The Crazy Programmer" xmlUrl="http://www.thecrazyprogrammer.com/feeds/posts/default" title="The Crazy Programmer" />
+    <outline type="rss" text="the null-log" xmlUrl="https://the-null-log.org/rss" title="the null-log" />
+    <outline type="rss" text="The Overflow - Stack Overflow Blog" xmlUrl="https://stackoverflow.blog/newsletter/feed/" title="The Overflow - Stack Overflow Blog" />
+    <outline type="rss" text="The Pasture" xmlUrl="https://thephd.dev/feed.xml" title="The Pasture" />
+    <outline type="rss" text="The Syndicate" xmlUrl="https://martiancraft.com/feed.xml" title="The Syndicate" />
+    <outline type="rss" text="TheHappieCat" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCBsuOBu-dxj5bx1KMgmar5g" title="TheHappieCat" />
+    <outline type="rss" text="Thoughtworks (uploads) on YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?user=thoughtworks" title="Thoughtworks (uploads) on YouTube" />
+    <outline type="rss" text="Thoughtworks Technology Podcast" xmlUrl="http://feeds.soundcloud.com/users/soundcloud:users:94605026/sounds.rss" title="Thoughtworks Technology Podcast" />
+    <outline type="rss" text="Trevor Jim" xmlUrl="http://trevorjim.com/feed.xml" title="Trevor Jim" />
+    <outline type="rss" text="www.jesshamrick.com" xmlUrl="http://www.jesshamrick.com/feed.xml" title="www.jesshamrick.com" />
+    <outline type="rss" text="Zig monthly" xmlUrl="https://zigmonthly.org/index.xml" title="Zig monthly" />
+    <outline type="rss" text="The Engineering Mindset - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCk0fGHsCEzGig-rSzkfCjMw" title="The Engineering Mindset - YouTube" tags="depth/medium" />
+    <outline type="rss" text="CuriousMarc - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC3bosUr3WlKYm4sBaLs-Adw" title="CuriousMarc - YouTube" tags="depth/medium" />
+    <outline type="rss" text="Paper Skies" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCnmEz-Q8w4meSGoQdd-cQBw" title="Paper Skies" tags="depth/medium,format/history" />
+    <outline type="rss" text="SandRhoman History - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC7pr_dQxm2Ns2KlzRSx5FZA" title="SandRhoman History - YouTube" tags="depth/medium,format/history" />
+    <outline type="rss" text="Timeline - World History Documentaries - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UC88lvyJe7aHZmcvzvubDFRg" title="Timeline - World History Documentaries - YouTube" tags="depth/medium,format/history" />
+    <outline type="rss" text="Epic History TV - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCvPXiKxH-eH9xq-80vpgmKQ" title="Epic History TV - YouTube" tags="depth/medium,format/history,structure/series" />
+    <outline type="rss" text="Baby Steps" xmlUrl="http://smallcultfollowing.com/babysteps/atom.xml" title="Baby Steps" tags="depth/medium,structure/misc" />
+    <outline type="rss" text="Lobsters: assembly - Assembly programming" xmlUrl="https://lobste.rs/t/assembly.rss" title="Lobsters: assembly - Assembly programming" tags="depth/medium,mode/practical" />
+    <outline type="rss" text="ZonePG" xmlUrl="https://zonepg.github.io/index.xml" title="ZonePG" tags="depth/medium,mode/practical" />
+    <outline type="rss" text="简说linux 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/646178510" title="简说linux 的 bilibili 动态" tags="depth/medium,mode/practical" />
+    <outline type="rss" text="The Mouseless Dev - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCoJtk2M8bme9KXTe6F3K-Yg" title="The Mouseless Dev - YouTube" tags="depth/medium,mode/practical,structure/series" />
+    <outline type="rss" text="The Valuable Dev" xmlUrl="https://thevaluable.dev/index.xml" title="The Valuable Dev" tags="depth/medium,mode/practical,structure/series" />
+    <outline type="rss" text="Unison Language | Whats New?" xmlUrl="https://www.unison-lang.org/feed.xml" title="Unison Language | Whats New?" tags="depth/medium,mode/practical,structure/series" />
+    <outline type="rss" text="小乖他爹-知乎 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/46326151" title="小乖他爹-知乎 的 bilibili 动态" />
+    <outline type="rss" text="GT小新 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/2083280" title="GT小新 的 bilibili 动态" tags="depth/deep" />
+    <outline type="rss" text="Physics with Elliot" xmlUrl="http://www.youtube.com/feeds/videos.xml?channel_id=UCP3alkHEJhoxTpy3iVON-lg" title="Physics with Elliot" tags="depth/deep" />
+    <outline type="rss" text="東雲正樹 的知乎文章" xmlUrl="https://rsshub.app/zhihu/posts/people/Masaki.Ryuu" title="東雲正樹 的知乎文章" tags="depth/deep,mode/practical" />
+    <outline type="rss" text="Heeger的知乎动态" xmlUrl="https://rsshub.app/zhihu/people/activities/heeger-7" title="Heeger的知乎动态" tags="depth/deep,mode/practical" />
+    <outline type="rss" text="Lobsters: debugging - Debugging techniques" xmlUrl="https://lobste.rs/t/debugging.rss" title="Lobsters: debugging - Debugging techniques" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="Andrew Kelley" xmlUrl="https://andrewkelley.me/rss.xml" title="Andrew Kelley" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="SunnyV2 - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCuF49lP5gkkw5L8HK3H6GJg" title="SunnyV2 - YouTube" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="LGR - YouTube" xmlUrl="https://www.youtube.com/feeds/videos.xml?channel_id=UCLx053rWZxCiYWsBETgdKrQ" title="LGR - YouTube" tags="depth/shallow" />
+    <outline type="rss" text="Hector Martin" xmlUrl="https://social.treehouse.systems/@marcan.rss" title="Hector Martin" tags="depth/shallow,structure/misc" />
+    <outline type="rss" text="爱可可-爱生活 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/23852932" title="爱可可-爱生活 的 bilibili 动态" />
+    <outline type="rss" text="甜品专家 的 bilibili 动态" xmlUrl="https://rsshub.app/bilibili/user/dynamic/2919428" title="甜品专家 的 bilibili 动态" />
+    <outline type="rss" text="集智百科 - 复杂系统|人工智能|复杂科学|复杂网络|自组织 - 最近更改 [zh-cn]" xmlUrl="https://wiki.swarma.org/index.php?title=%E7%89%B9%E6%AE%8A:%E6%9C%80%E8%BF%91%E6%9B%B4%E6%94%B9&amp;feed=atom" title="集智百科 - 复杂系统|人工智能|复杂科学|复杂网络|自组织 - 最近更改 [zh-cn]" />
   </body>
 </opml>
