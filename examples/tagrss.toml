@@ -1,0 +1,153 @@
+# TagRss example configuration.
+#
+# This file is the whole setup: sources with tags, and folders with rules over tags.
+# Copy it to ~/.config/tagrss/tagrss.toml, or pass it with --config.
+#
+# Tags are paths separated by "/". A rule tag matches itself and everything below it,
+# so the rule "topic" matches "topic/ai", "topic/os", and so on.
+#
+# The system adds its own tags to every entry; your tags must not use these prefixes:
+#   source/<slug>   which source the entry came from, slug derived from the title
+#   age/today       published in the last 24 hours (also has age/week and age/month)
+#   age/week        published in the last 7 days
+#   age/month       published in the last 30 days
+#   length/short    under 500 words
+#   length/medium   500 to 2999 words
+#   length/long     3000 words or more
+#   length/unknown  the feed gave no text, typical of video feeds
+#   state/read      marked read
+#   state/unread    not marked read
+
+# ---------------------------------------------------------------------------
+# Sources
+#
+#   url    required, the feed URL; also the source's identity
+#   title  optional, overrides the feed's own title and the source/ slug
+#   tags   optional, inherited by every entry from this source
+# ---------------------------------------------------------------------------
+
+# Long-form articles.
+
+[[source]]
+url  = "https://distill.pub/rss.xml"
+tags = ["topic/ai", "topic/programming", "depth/deep", "mode/practical"]
+
+[[source]]
+url  = "https://osblog.stephenmarz.com/feed.rss"
+tags = ["topic/os", "topic/programming", "depth/deep", "format/project", "mode/practical", "structure/series"]
+
+[[source]]
+url  = "http://www.cpushack.com/feed/"
+tags = ["topic/electronics", "depth/medium", "format/history"]
+
+[[source]]
+url  = "http://sam.zeloof.xyz/feed/"
+tags = ["topic/electronics"]
+
+[[source]]
+url  = "https://allthingslinguistic.com/feed"
+tags = ["topic/language"]
+
+# An aggregator: one feed of many authors, filtered by topic.
+# The title override gives a clean slug, source/lobsters-graphics.
+
+[[source]]
+url   = "https://lobste.rs/t/graphics.rss"
+title = "Lobsters graphics"
+tags  = ["topic/graphics", "topic/programming", "depth/deep", "format/filter"]
+
+# The feed title is written in Unicode math letters; the override gives source/vermaden.
+
+[[source]]
+url   = "https://vermaden.wordpress.com/feed/"
+title = "vermaden"
+tags  = ["depth/deep", "format/filter", "mode/practical"]
+
+# Video feeds. They carry no text, so their entries get length/unknown.
+# "format/video" is not in the current OPML taxonomy; it is suggested here
+# because 133 of the sources are YouTube and a rule cannot otherwise tell them apart.
+
+[[source]]
+url  = "https://www.youtube.com/feeds/videos.xml?channel_id=UCbfYPyITQ-7l4upoX8nvctg"
+tags = ["topic/ai", "topic/programming", "depth/shallow", "format/video"]
+
+[[source]]
+url  = "https://www.youtube.com/feeds/videos.xml?channel_id=UCMmaBzfCCwZ2KqaBJjkj0fw"
+tags = ["topic/history", "depth/deep", "format/history", "format/video", "structure/series"]
+
+[[source]]
+url  = "https://www.youtube.com/feeds/videos.xml?channel_id=UC6uKrU_WqJ1R2HMTY3LIx5Q"
+tags = ["topic/science", "format/video"]
+
+# Chinese titles; the slug keeps the characters, e.g. source/跟李沐学ai-的-bilibili-动态.
+
+[[source]]
+url  = "https://rsshub.app/bilibili/user/dynamic/1567748478"
+tags = ["topic/ai", "topic/programming", "depth/deep", "format/video", "structure/series"]
+
+[[source]]
+url  = "https://www.youtube.com/feeds/videos.xml?channel_id=UCyyZmjaoQtONBvxlyb-TJOw"
+tags = ["format/video"]
+
+# Untagged sources. Their entries carry only system tags,
+# so they appear in folders like "Needs tags" below.
+
+[[source]]
+url = "https://alexandreafonso.me/feed/"
+
+[[source]]
+url = "https://rsshub.app/sspai/column/263"
+
+# ---------------------------------------------------------------------------
+# Folders
+#
+#   name   required, unique
+#   rule   required, a boolean expression over tags:
+#            tag             matches the tag and everything below it
+#            NOT a           negation, binds tightest
+#            a AND b         both
+#            a OR b          either, binds loosest
+#            ( ... )         grouping
+# ---------------------------------------------------------------------------
+
+[[folder]]
+name = "Today"
+rule = "age/today AND state/unread"
+
+[[folder]]
+name = "AI"
+rule = "topic/ai AND state/unread"
+
+[[folder]]
+name = "Deep programming"
+rule = "topic/programming AND depth/deep AND NOT format/video AND state/unread"
+
+# length/ is about the entry, depth/ is about the source; they combine.
+[[folder]]
+name = "Long reads this week"
+rule = "length/long AND age/week AND NOT state/read"
+
+[[folder]]
+name = "Hardware"
+rule = "(topic/electronics OR topic/os) AND state/unread"
+
+[[folder]]
+name = "History"
+rule = "(topic/history OR format/history) AND state/unread"
+
+[[folder]]
+name = "Videos"
+rule = "format/video AND age/month AND state/unread"
+
+# "topic" alone matches any topic/... tag, so this is every source without a topic.
+[[folder]]
+name = "Needs tags"
+rule = "NOT topic"
+
+[[folder]]
+name = "Everything else"
+rule = "state/unread AND NOT (topic/programming OR topic/ai OR topic/electronics OR topic/history)"
+
+[[folder]]
+name = "Read"
+rule = "state/read"
