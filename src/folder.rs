@@ -1,4 +1,4 @@
-use crate::tag::{Tag, TagRuleEnum, TimeRange, Contains, TagRule};
+use crate::tag::{Tag, TimeRange};
 use crate::models::FeedItem;
 use std::fs;
 use std::path::Path;
@@ -6,7 +6,6 @@ use std::io::Read;
 use anyhow::{Result, anyhow};
 use log::{info, warn, debug, error};
 use serde::{Serialize, Deserialize};
-use chrono::{DateTime, Utc};
 use regex::Regex;
 
 #[derive(Debug, Serialize, Deserialize)]
@@ -28,22 +27,41 @@ impl Rules {
     }
 }
 
+#[derive(Debug, Serialize, Deserialize, Clone)]
+pub enum RuleType {
+    TitleContains(String),
+    ContentContains(String),
+    TimeRange(TimeRange),
+    FeedTag(Tag),
+}
+
 #[derive(Debug, Serialize, Deserialize)]
 pub struct RulesLeaf {
     reverse: bool,  // NOT operator
-    rule_type: TagRuleEnum,
+    rule: RuleType,
 }
 
 impl Rule for RulesLeaf {
     fn evaluate(&self, item: &FeedItem) -> bool {
         // Use the TagRule trait's find_tag method which already knows how to evaluate each rule type
-        let result = self.rule_type.find_tag(item).is_some();
-
-        if self.reverse {
-            !result
-        } else {
-            result
-        }
+        let result = match &self.rule {
+            RuleType::TitleContains(regex) => {
+                let target_regex = Regex::new(&regex).unwrap();
+                target_regex.is_match(&item.title)
+            }
+            RuleType::ContentContains(regex) => {
+                let target_regex = Regex::new(&regex).unwrap();
+                target_regex.is_match(&item.content.as_ref().unwrap())
+            }
+            RuleType::FeedTag(tag) => {
+                unimplemented!()
+            }
+            RuleType::TimeRange(time_range) => {
+                let published = item.published_at.unwrap();
+                return published >= time_range.start.to_datetime().unwrap() && published <= time_range.end.to_datetime().unwrap()
+            }
+        };
+        self.reverse != result
     }
 }
 
@@ -69,6 +87,13 @@ impl Rule for RulesNode {
 pub struct Folder {
     pub name: String,
     pub root: Rules,
+}
+
+impl Folder {
+    /// Find all items that match the folder's rules
+    pub fn find_matching_items<'a>(&self, items: &'a [FeedItem]) -> Vec<&'a FeedItem> {
+        items.iter().filter(|item| self.root.evaluate(item)).collect()
+    }
 }
 
 /// Manages a collection of folders
@@ -156,35 +181,29 @@ impl FolderManager {
     fn parse_yaml_rule_item(rule_item: &YamlRuleItem) -> Result<Rules> {
         match rule_item {
             YamlRuleItem::Tag { tag } => {
-                // Tag rule
                 Ok(Rules::LEAF(RulesLeaf {
                     reverse: false,
-                    rule_type: TagRuleEnum::Contains(Contains {
-                        tag: Tag::new(tag.clone()),
-                        target_regex: tag.clone(), // Exact match
-                    }),
+                    rule: RuleType::FeedTag(Tag::new(tag.clone())),
                 }))
             },
             YamlRuleItem::Time { time } => {
-                // Time range rule
-                let (start_date, end_date) = Self::parse_time_range(time)?;
                 Ok(Rules::LEAF(RulesLeaf {
                     reverse: false,
-                    rule_type: TagRuleEnum::TimeRange(TimeRange {
-                        tag: Tag::new("time_range".to_string()),
-                        start: start_date,
-                        end: end_date,
-                    }),
+                    rule: RuleType::TimeRange(
+                        TimeRange::new(time)?
+                    ),
                 }))
             },
-            YamlRuleItem::Contains { contains } => {
-                // Contains rule (for title/content search)
+            YamlRuleItem::TitleContains { title_contains } => {
                 Ok(Rules::LEAF(RulesLeaf {
                     reverse: false,
-                    rule_type: TagRuleEnum::Contains(Contains {
-                        tag: Tag::new("content_match".to_string()),
-                        target_regex: contains.clone(),
-                    }),
+                    rule: RuleType::TitleContains(title_contains.clone()),
+                }))
+            },
+            YamlRuleItem::ContentContains { content_contains } => {
+                Ok(Rules::LEAF(RulesLeaf {
+                    reverse: false,
+                    rule: RuleType::ContentContains(content_contains.clone()),
                 }))
             },
             YamlRuleItem::Not { not } => {
@@ -194,7 +213,7 @@ impl FolderManager {
                     Rules::LEAF(leaf) => {
                         Ok(Rules::LEAF(RulesLeaf {
                             reverse: true,
-                            rule_type: leaf.rule_type,
+                            rule: leaf.rule,
                         }))
                     },
                     _ => Err(anyhow!("NOT operation currently only supports simple rules")),
@@ -210,7 +229,7 @@ impl FolderManager {
                     is_and: true, // Use AND logic
                     rules: child_rules,
                 }))
-            },
+            }
             YamlRuleItem::Or { or } => {
                 let mut child_rules = Vec::new();
                 for item in or {
@@ -225,103 +244,6 @@ impl FolderManager {
         }
     }
     
-    /// Parse a time range rule from a string like "2024-01-01 ~ 2024-01-31"
-    /// Also supports special formats like "Yesterday ~ " (yesterday to open-ended future)
-    fn parse_time_range(time_str: &str) -> Result<(Option<DateTime<Utc>>, Option<DateTime<Utc>>)> {
-        // Split the string by '~' to get the start and end dates
-        let parts: Vec<&str> = time_str.split('~').collect();
-        if parts.len() != 2 {
-            return Err(anyhow!("Invalid time range format. Expected 'start ~ end' but got: {}", time_str));
-        }
-        
-        let start_str = parts[0].trim();
-        let end_str = parts[1].trim();
-        
-        // Parse the start date, handling special formats
-        let start_date = if start_str.is_empty() {
-            None
-        } else if start_str.eq_ignore_ascii_case("yesterday") {
-            // Get yesterday's date
-            let yesterday = Utc::now().date_naive().pred_opt().unwrap();
-            Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                yesterday.and_hms_opt(0, 0, 0).unwrap(),
-                Utc,
-            ))
-        } else if start_str.eq_ignore_ascii_case("today") {
-            // Get today's date
-            let today = Utc::now().date_naive();
-            Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                today.and_hms_opt(0, 0, 0).unwrap(),
-                Utc,
-            ))
-        } else if start_str.eq_ignore_ascii_case("tomorrow") {
-            // Get tomorrow's date
-            let tomorrow = Utc::now().date_naive().succ_opt().unwrap();
-            Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                tomorrow.and_hms_opt(0, 0, 0).unwrap(),
-                Utc,
-            ))
-        } else {
-            // Parse as a regular date
-            match chrono::NaiveDate::parse_from_str(start_str, "%Y-%m-%d") {
-                Ok(date) => Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                    date.and_hms_opt(0, 0, 0).unwrap(),
-                    Utc,
-                )),
-                Err(e) => return Err(anyhow!("Failed to parse start date '{}': {}", start_str, e)),
-            }
-        };
-        
-        // Parse the end date
-        let end_date = if end_str.is_empty() {
-            None // Open-ended (no upper bound)
-        } else if end_str.eq_ignore_ascii_case("yesterday") {
-            // Get yesterday's date
-            let yesterday = Utc::now().date_naive().pred_opt().unwrap();
-            Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                yesterday.and_hms_opt(23, 59, 59).unwrap(),
-                Utc,
-            ))
-        } else if end_str.eq_ignore_ascii_case("today") {
-            // Get today's date
-            let today = Utc::now().date_naive();
-            Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                today.and_hms_opt(23, 59, 59).unwrap(),
-                Utc,
-            ))
-        } else if end_str.eq_ignore_ascii_case("tomorrow") {
-            // Get tomorrow's date
-            let tomorrow = Utc::now().date_naive().succ_opt().unwrap();
-            Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                tomorrow.and_hms_opt(23, 59, 59).unwrap(),
-                Utc,
-            ))
-        } else {
-            match chrono::NaiveDate::parse_from_str(end_str, "%Y-%m-%d") {
-                Ok(date) => Some(DateTime::<Utc>::from_naive_utc_and_offset(
-                    // Set to end of day
-                    date.and_hms_opt(23, 59, 59).unwrap(),
-                    Utc,
-                )),
-                Err(e) => return Err(anyhow!("Failed to parse end date '{}': {}", end_str, e)),
-            }
-        };
-        
-        Ok((start_date, end_date))
-    }
-    
-    // Parse time rule (obsolete - redirects to parse_time_range)
-    fn parse_time_rule(time_str: &str) -> Result<Rules> {
-        let (start_date, end_date) = Self::parse_time_range(time_str)?;
-        Ok(Rules::LEAF(RulesLeaf {
-            reverse: false,
-            rule_type: TagRuleEnum::TimeRange(TimeRange {
-                tag: Tag::new("time_range".to_string()),
-                start: start_date,
-                end: end_date,
-            }),
-        }))
-    }
 }
 
 // YAML configuration structures
@@ -342,7 +264,8 @@ struct YamlFolder {
 enum YamlRuleItem {
     Tag { tag: String },
     Time { time: String },
-    Contains { contains: String },
+    TitleContains { title_contains: String },
+    ContentContains { content_contains: String },
     Not { 
         not: Box<YamlRuleItem>
     },

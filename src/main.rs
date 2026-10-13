@@ -1,7 +1,6 @@
 use clap::{Parser, Subcommand};
 use anyhow::Result;
-use chrono;
-use log::{info, debug, warn, error, LevelFilter};
+use log::{info, debug, warn, error};
 
 mod db;
 mod feed;
@@ -10,7 +9,6 @@ mod tag;
 mod logger;
 mod folder;
 
-use tag::{TagManager, TagRuleEnum, Contains, TimeRange };
 use logger::{LogConfig, parse_log_level};
 use folder::FolderManager;
 
@@ -50,69 +48,12 @@ enum Commands {
     #[command(name = "update")]
     UpdateFeeds,
     
-    /// Manage tag rules
-    #[command(name = "rules")]
-    Rules {
-        #[command(subcommand)]
-        subcommand: Option<RuleCommands>,
-    },
-    
     /// Manage folders
     #[command(name = "folders")]
     Folders {
         #[command(subcommand)]
         subcommand: Option<FolderCommands>,
     },
-}
-
-#[derive(Subcommand, Debug)]
-enum RuleCommands {
-    /// List all rules
-    #[command(name = "list")]
-    List,
-    
-    /// Add a new contains rule
-    #[command(name = "add-contains")]
-    AddContains {
-        /// Name of the tag
-        name: String,
-        
-        /// String to search for
-        target: String,
-        
-        /// Whether the search is case sensitive
-        #[arg(long, default_value = "false")]
-        case_sensitive: bool,
-    },
-    
-    /// Add a new time range rule
-    #[command(name = "add-timerange")]
-    AddTimeRange {
-        /// Name of the tag
-        name: String,
-        
-        /// Start date (ISO format)
-        #[arg(long)]
-        start: Option<String>,
-        
-        /// End date (ISO format)
-        #[arg(long)]
-        end: Option<String>,
-    },
-    
-    // /// Add a new from-feed rule
-    // #[command(name = "add-feed")]
-    // AddFromFeed {
-    //     /// Name of the tag
-    //     name: String,
-        
-    //     /// ID of the feed
-    //     feed_id: i64,
-    // },
-    
-    /// Apply rules to existing items
-    #[command(name = "apply")]
-    Apply,
 }
 
 #[derive(Subcommand, Debug)]
@@ -148,14 +89,11 @@ async fn main() -> Result<()> {
     // Initialize database
     let db = db::Database::new("sqlite:tagrss.db").await?;
     
-    // Initialize tag manager
-    let tag_manager = TagManager::new("tag_rules.json");
-    
+    // Initialize feed manager
+    let feed_manager = feed::FeedManager::new(db);
+
     // Initialize folder manager with YAML config
     let mut folder_manager = FolderManager::new("folders.yml");
-    
-    // Initialize feed manager with tag manager
-    let mut feed_manager = feed::FeedManager::new(db, tag_manager);
     
     match args.command {
         Some(Commands::AddFeed { url }) => {
@@ -176,96 +114,6 @@ async fn main() -> Result<()> {
             info!("Updating feeds:");
             feed_manager.update_feeds().await?;
             info!("Feeds updated successfully.");
-        }
-        
-        Some(Commands::Rules { subcommand }) => {
-            match subcommand {
-                Some(RuleCommands::List) => {
-                    info!("Listing rules:");
-                    for (i, rule) in feed_manager.tag_manager.rules().iter().enumerate() {
-                        info!("Rule {}: {:?}", i + 1, rule);
-                    }
-                }
-                
-                Some(RuleCommands::AddContains { name, target, case_sensitive }) => {
-                    info!("Adding contains rule: {} -> {}", name, target);
-                    
-                    // Create simplified regex pattern
-                    let regex_pattern = if case_sensitive {
-                        // Use plain string as regex pattern
-                        target.clone()
-                    } else {
-                        // Add case-insensitive flag for regex
-                        format!("(?i){}", target)
-                    };
-                    
-                    let tag = tag::Tag::new(name);
-                    
-                    let rule = Contains {
-                        tag,
-                        target_regex: regex_pattern,
-                    };
-                    
-                    feed_manager.tag_manager.add_rule(TagRuleEnum::Contains(rule));
-                    feed_manager.tag_manager.save_to_file()?;
-                }
-                
-                Some(RuleCommands::AddTimeRange { name, start, end }) => {
-                    info!("Adding time-range rule: {} -> {} to {}", 
-                        name, 
-                        start.as_ref().map_or("anytime".to_string(), |d| d.to_string()), 
-                        end.as_ref().map_or("anytime".to_string(), |d| d.to_string())
-                    );
-                    
-                    // Create a tag with just a name
-                    let tag = tag::Tag::new(name);
-                    
-                    // Parse dates if provided
-                    let start_date = match &start {
-                        Some(s) => Some(chrono::DateTime::parse_from_rfc3339(s)?.with_timezone(&chrono::Utc)),
-                        None => None
-                    };
-                    
-                    let end_date = match &end {
-                        Some(e) => Some(chrono::DateTime::parse_from_rfc3339(e)?.with_timezone(&chrono::Utc)),
-                        None => None
-                    };
-                    
-                    let rule = TimeRange {
-                        tag,
-                        start: start_date,
-                        end: end_date,
-                    };
-                    
-                    feed_manager.tag_manager.add_rule(TagRuleEnum::TimeRange(rule));
-                    feed_manager.tag_manager.save_to_file()?;
-                }
-                
-                // Some(RuleCommands::AddFromFeed { name, feed_id }) => {
-                //     info!("Adding from-feed rule: {} -> Feed ID: {}", name, feed_id);
-                    
-                //     // Create a tag with just a name
-                //     let tag = tag::Tag::new(name);
-                    
-                //     let rule = FromFeed {
-                //         tag,
-                //         feed_id,
-                //     };
-                    
-                //     feed_manager.tag_manager.add_rule(TagRuleEnum::FromFeed(rule));
-                //     feed_manager.tag_manager.save_to_file()?;
-                // }
-                
-                Some(RuleCommands::Apply) => {
-                    info!("Applying rules to existing items...");
-                    feed_manager.apply_rules_to_existing_items().await?;
-                    info!("Rules applied successfully.");
-                }
-                
-                None => {
-                    warn!("Please specify a rule command. Use --help for options.");
-                }
-            }
         }
         
         Some(Commands::Folders { subcommand }) => {

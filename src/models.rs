@@ -2,7 +2,6 @@ use std::collections::HashSet;
 
 use serde::{Deserialize, Serialize};
 use chrono::{DateTime, Utc};
-use crate::tag::{Tag, TagRule};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 pub struct Feed {
@@ -10,18 +9,6 @@ pub struct Feed {
     pub url: String,
     pub title: Option<String>,
     pub last_updated: Option<DateTime<Utc>>,
-}
-
-impl TagRule for Feed {
-    fn find_tag(&self, item: &FeedItem) -> Option<Tag> {
-        if item.feed_id == self.id {
-            Some(Tag { // Tag format: feed/title
-                name: format!("feed/{}", self.title.as_ref().unwrap_or(&"unknown".to_string())),
-            })
-        } else {
-            None
-        }
-    }
 }
 
 #[derive(Debug, Serialize, Deserialize)]

@@ -4,7 +4,6 @@ use reqwest::Client;
 use log::{info, debug, error, warn};
 use crate::db::Database;
 use crate::models::FeedItem;
-use crate::tag::TagManager;
 use std::collections::HashSet;
 // Import the Ok variant for pattern matching
 use std::result::Result::Ok as StdOk;
@@ -12,16 +11,14 @@ use std::result::Result::Ok as StdOk;
 pub struct FeedManager {
     pub db: Database,
     client: Client,
-    pub tag_manager: TagManager,
 }
 
 impl FeedManager {
-    pub fn new(db: Database, tag_manager: TagManager) -> Self {
+    pub fn new(db: Database) -> Self {
         debug!("Initializing FeedManager");
         Self {
             db,
             client: Client::new(),
-            tag_manager,
         }
     }
 
@@ -98,20 +95,16 @@ impl FeedManager {
             let title = entry.title.as_ref().map(|t| t.content.clone()).unwrap_or_else(|| "Untitled".to_string());
             let content = entry.content.as_ref().and_then(|c| c.body.clone());
             
-            // Create feed item and apply rules
-            let mut feed_item = FeedItem {
+            // Create feed item
+            let feed_item = FeedItem {
                 feed_id,
-                tags: HashSet::new(), // Use HashSet as defined in models
+                tags: HashSet::new(), // Use empty HashSet initially
                 title: title.clone(),
                 url: link.clone(),
                 content,
                 published_at: entry.published,
             };
             
-            // Apply tag rules
-            debug!("Applying tag rules to item: {}", title);
-            self.tag_manager.apply_rules(&mut feed_item)?;
-
             // Add to database
             debug!("Adding item to database: {}", title);
             self.db.add_item(feed_item).await?;
@@ -120,28 +113,6 @@ impl FeedManager {
 
         debug!("Added {} new items for feed ID: {}", new_items, feed_id);
         self.db.update_feed_timestamp(feed_id).await?;
-        Ok(())
-    }
-    
-    pub async fn apply_rules_to_existing_items(&self) -> Result<()> {
-        info!("Applying tag rules to all existing items");
-        // Get all items from the database
-        let items = self.db.get_all_items().await?;
-        debug!("Found {} items to process", items.len());
-        
-        let mut updated_items = 0;
-        for mut item in items {
-            // Apply tag rules directly to the items from database
-            let initial_tags = item.tags.len();
-            self.tag_manager.apply_rules(&mut item)?;
-            
-            if item.tags.len() > initial_tags {
-                debug!("Updated tags for item: {}", item.title);
-                updated_items += 1;
-            }
-        }
-        
-        info!("Updated tags for {} items", updated_items);
         Ok(())
     }
 } 

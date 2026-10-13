@@ -6,7 +6,7 @@ folders:
     time: "2025-01-01 ~ "
 
   - name: "All things about Biden"
-    contains: "Biden"
+    title_contains: "Biden"
 
   - name: "Today's News"
     and:
@@ -28,7 +28,8 @@ folders:
       - tag: "technology"
       - not:
           tag: "politics"
-      - contains: "Trump"
+      - title_contains: "Trump"
+      - content_contains: "Trump"
       - or:
           - tag: "ai"
           - tag: "programming"
