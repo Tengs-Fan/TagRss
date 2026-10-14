@@ -106,21 +106,32 @@ It holds two things the system cannot get back on demand:
 
 ```
 entries (
-  source_url     TEXT NOT NULL,   -- the source's identity, from the config file
-  entry_key      TEXT NOT NULL,   -- feed entry id, falling back to the link
-  url            TEXT,            -- link to open in the browser
+  id             INTEGER PRIMARY KEY,  -- short handle for the CLI; not stable across a rebuild
+  source_url     TEXT NOT NULL,        -- the source's identity, from the config file
+  entry_key      TEXT NOT NULL,        -- feed entry id, falling back to the link
+  url            TEXT,                 -- link to open in the browser
   title          TEXT NOT NULL,
-  published_at   TEXT,            -- RFC 3339; feed "published", falling back to "updated"
-  first_seen_at  TEXT NOT NULL,   -- when TagRss first fetched it
-  word_count     INTEGER,         -- NULL when the feed gave no text
-  PRIMARY KEY (source_url, entry_key)
+  published_at   TEXT,                 -- RFC 3339; feed "published", falling back to "updated"
+  first_seen_at  TEXT NOT NULL,        -- when TagRss first fetched it
+  word_count     INTEGER,              -- NULL when the feed gave no text
+  UNIQUE (source_url, entry_key)
 )
 
 reads (
-  source_url  TEXT NOT NULL,
-  entry_key   TEXT NOT NULL,
-  read_at     TEXT NOT NULL,
-  PRIMARY KEY (source_url, entry_key)
+  entry_id  INTEGER PRIMARY KEY REFERENCES entries(id),
+  read_at   TEXT NOT NULL
+)
+
+fetches (
+  source_url  TEXT PRIMARY KEY,
+  feed_title  TEXT,                    -- the feed's own title, shown when the config has none
+  fetched_at  TEXT NOT NULL,
+  error       TEXT                     -- last fetch error, NULL on success
+)
+
+meta (
+  key    TEXT PRIMARY KEY,             -- currently only "rebuilt_at"
+  value  TEXT NOT NULL
 )
 ```
 
@@ -128,7 +139,12 @@ Entries are written once and never rewritten.
 Mark read inserts a row into `reads`; mark unread deletes it.
 There is no `sources` table, no `rules` table, and no tag column anywhere.
 
+`fetches` is a cache of the last sync per source, rewritten by every sync and never a source of truth.
+It exists because the feed's own title has to live somewhere once fetched, and because a sync over hundreds of feeds needs a place to report which ones failed.
+`import` writes the OPML title into each `[[source]]`, so imported sources never depend on this cache for their names.
+
 Entry identity is `(source, entry id)`, not the URL alone, so the same article appearing in two feeds is kept in both.
+The integer `id` exists only so commands like `read 42` can be typed.
 
 Entries keep their `source_url` after the source is removed from the config file, so unsubscribing does not delete history.
 Such entries have no source tags and appear only in folders whose rules match on system tags alone.
@@ -137,7 +153,9 @@ Such entries have no source tags and appear only in folders whose rules match on
 
 Content is not stored, so `word_count` is computed once at fetch time and cannot be recomputed later.
 It counts words in the entry's content, falling back to its summary, after stripping HTML; plain text without any markup must count correctly.
-When neither exists, `word_count` is NULL and the entry gets `length/unknown`.
+Chinese and Japanese are written without spaces, so each Han, Hiragana, or Katakana character counts as one word; everything else is split on whitespace.
+This makes a 3000-character Chinese article `length/long` rather than `length/short`; the thresholds may need tuning for Chinese once real counts are seen.
+When neither content nor summary exists, `word_count` is NULL and the entry gets `length/unknown`.
 
 ### Losing the database
 
@@ -146,6 +164,9 @@ The setup survives because it lives in the config file.
 
 Recovery: the next sync refills entries from the feeds, and every entry published before the rebuild is treated as read.
 This is recorded as a single `rebuilt_at` timestamp in the database, so no per-entry rows are needed.
+
+A fresh install cannot be told apart from a rebuild, so `rebuilt_at` is set whenever the database file is created.
+The first sync therefore starts at inbox zero: only entries published after installation show as unread, not the whole backlog of every feed.
 
 ## Locations
 
