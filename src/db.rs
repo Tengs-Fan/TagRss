@@ -1,233 +1,270 @@
-use anyhow::Result;
-use chrono::{DateTime, Utc};
-use rusqlite::{params, Connection};
-use std::collections::HashSet;
-use std::path::Path;
+//! The database: a disposable cache of what feeds said, plus read marks.
 
-use crate::models::{Article, Rule, Source};
+use anyhow::{Context, Result};
+use chrono::{DateTime, Utc};
+use rusqlite::{params, Connection, OptionalExtension};
+use std::collections::HashMap;
+use std::path::Path;
 
 pub struct Database {
     conn: Connection,
 }
 
+/// An entry as fetched, before it has an id.
+pub struct NewEntry<'a> {
+    pub source_url: &'a str,
+    pub entry_key: &'a str,
+    pub url: Option<&'a str>,
+    pub title: &'a str,
+    pub published_at: Option<DateTime<Utc>>,
+    pub word_count: Option<u32>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Entry {
+    pub id: i64,
+    pub source_url: String,
+    pub url: Option<String>,
+    pub title: String,
+    pub published_at: Option<DateTime<Utc>>,
+    pub first_seen_at: DateTime<Utc>,
+    pub word_count: Option<u32>,
+    /// An explicit read (true) or unread (false) mark; None if never marked.
+    pub mark: Option<bool>,
+}
+
+#[derive(Debug, Clone)]
+pub struct Fetch {
+    pub feed_title: Option<String>,
+    pub fetched_at: DateTime<Utc>,
+    pub error: Option<String>,
+}
+
+const SCHEMA: &str = r#"
+CREATE TABLE IF NOT EXISTS entries (
+    id            INTEGER PRIMARY KEY,
+    source_url    TEXT NOT NULL,
+    entry_key     TEXT NOT NULL,
+    url           TEXT,
+    title         TEXT NOT NULL,
+    published_at  TEXT,
+    first_seen_at TEXT NOT NULL,
+    word_count    INTEGER,
+    UNIQUE (source_url, entry_key)
+);
+CREATE TABLE IF NOT EXISTS marks (
+    entry_id  INTEGER PRIMARY KEY REFERENCES entries(id),
+    read      INTEGER NOT NULL,
+    marked_at TEXT NOT NULL
+);
+CREATE TABLE IF NOT EXISTS fetches (
+    source_url TEXT PRIMARY KEY,
+    feed_title TEXT,
+    fetched_at TEXT NOT NULL,
+    error      TEXT
+);
+CREATE TABLE IF NOT EXISTS meta (
+    key   TEXT PRIMARY KEY,
+    value TEXT NOT NULL
+);
+"#;
+
+fn to_text(t: DateTime<Utc>) -> String {
+    t.to_rfc3339()
+}
+
+fn from_text(s: &str) -> rusqlite::Result<DateTime<Utc>> {
+    DateTime::parse_from_rfc3339(s)
+        .map(|t| t.with_timezone(&Utc))
+        .map_err(|e| rusqlite::Error::FromSqlConversionFailure(0, rusqlite::types::Type::Text, Box::new(e)))
+}
+
 impl Database {
-    pub fn open<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let conn = Connection::open(path)?;
-        let db = Self { conn };
-        db.init()?;
-        Ok(db)
+    /// Opens the database, creating it and its directory if missing.
+    /// A newly created database records `now` as `rebuilt_at`, so it starts at inbox zero.
+    pub fn open(path: &Path, now: DateTime<Utc>) -> Result<Self> {
+        let created = !path.exists();
+        if let Some(dir) = path.parent().filter(|d| !d.as_os_str().is_empty()) {
+            std::fs::create_dir_all(dir).with_context(|| format!("cannot create {}", dir.display()))?;
+        }
+        let conn = Connection::open(path).with_context(|| format!("cannot open database {}", path.display()))?;
+        Self::init(conn, created.then_some(now))
     }
 
-    fn init(&self) -> Result<()> {
-        self.conn.execute_batch(
-            r#"
-            CREATE TABLE IF NOT EXISTS sources (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                url TEXT NOT NULL UNIQUE,
-                title TEXT NOT NULL,
-                tags TEXT NOT NULL DEFAULT '[]',
-                last_updated TEXT
-            );
+    /// An in-memory database for tests; `rebuilt_at` is whatever the caller passes.
+    pub fn open_in_memory(rebuilt_at: Option<DateTime<Utc>>) -> Result<Self> {
+        Self::init(Connection::open_in_memory()?, rebuilt_at)
+    }
 
-            CREATE TABLE IF NOT EXISTS articles (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                source_id INTEGER NOT NULL REFERENCES sources(id),
-                url TEXT NOT NULL UNIQUE,
-                title TEXT NOT NULL,
-                content TEXT,
-                published_at TEXT,
-                word_count INTEGER NOT NULL DEFAULT 0,
-                tags TEXT NOT NULL DEFAULT '[]',
-                read INTEGER NOT NULL DEFAULT 0,
-                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
-            );
+    fn init(conn: Connection, rebuilt_at: Option<DateTime<Utc>>) -> Result<Self> {
+        conn.execute_batch(SCHEMA)?;
+        if let Some(t) = rebuilt_at {
+            conn.execute(
+                "INSERT OR REPLACE INTO meta (key, value) VALUES ('rebuilt_at', ?1)",
+                params![to_text(t)],
+            )?;
+        }
+        Ok(Self { conn })
+    }
 
-            CREATE TABLE IF NOT EXISTS rules (
-                id INTEGER PRIMARY KEY AUTOINCREMENT,
-                rule_json TEXT NOT NULL
-            );
+    pub fn rebuilt_at(&self) -> Result<Option<DateTime<Utc>>> {
+        let value: Option<String> = self
+            .conn
+            .query_row("SELECT value FROM meta WHERE key = 'rebuilt_at'", [], |r| r.get(0))
+            .optional()?;
+        Ok(value.map(|v| from_text(&v)).transpose()?)
+    }
 
-            CREATE INDEX IF NOT EXISTS idx_articles_source ON articles(source_id);
-            CREATE INDEX IF NOT EXISTS idx_articles_read ON articles(read);
-            "#,
+    /// Stores an entry the first time it is seen; returns false if it was already stored.
+    pub fn insert_entry(&self, e: &NewEntry, now: DateTime<Utc>) -> Result<bool> {
+        let inserted = self.conn.execute(
+            "INSERT OR IGNORE INTO entries
+                 (source_url, entry_key, url, title, published_at, first_seen_at, word_count)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+            params![
+                e.source_url,
+                e.entry_key,
+                e.url,
+                e.title,
+                e.published_at.map(to_text),
+                to_text(now),
+                e.word_count,
+            ],
+        )?;
+        Ok(inserted == 1)
+    }
+
+    pub fn record_fetch(&self, source_url: &str, feed_title: Option<&str>, now: DateTime<Utc>, error: Option<&str>) -> Result<()> {
+        // A failed fetch keeps the title from the last successful one.
+        self.conn.execute(
+            "INSERT INTO fetches (source_url, feed_title, fetched_at, error) VALUES (?1, ?2, ?3, ?4)
+             ON CONFLICT (source_url) DO UPDATE SET
+                 feed_title = COALESCE(excluded.feed_title, feed_title),
+                 fetched_at = excluded.fetched_at,
+                 error = excluded.error",
+            params![source_url, feed_title, to_text(now), error],
         )?;
         Ok(())
     }
 
-    // === Sources ===
+    pub fn fetches(&self) -> Result<HashMap<String, Fetch>> {
+        let mut stmt = self.conn.prepare("SELECT source_url, feed_title, fetched_at, error FROM fetches")?;
+        let rows = stmt.query_map([], |r| {
+            Ok((
+                r.get::<_, String>(0)?,
+                Fetch {
+                    feed_title: r.get(1)?,
+                    fetched_at: from_text(&r.get::<_, String>(2)?)?,
+                    error: r.get(3)?,
+                },
+            ))
+        })?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
 
-    pub fn add_source(&self, url: &str, title: &str, tags: &HashSet<String>) -> Result<i64> {
-        let tags_json = serde_json::to_string(tags)?;
+    fn entries_where(&self, clause: &str, args: impl rusqlite::Params) -> Result<Vec<Entry>> {
+        let sql = format!(
+            "SELECT e.id, e.source_url, e.url, e.title, e.published_at, e.first_seen_at, e.word_count, m.read
+             FROM entries e LEFT JOIN marks m ON m.entry_id = e.id {clause}"
+        );
+        let mut stmt = self.conn.prepare(&sql)?;
+        let rows = stmt.query_map(args, |r| {
+            Ok(Entry {
+                id: r.get(0)?,
+                source_url: r.get(1)?,
+                url: r.get(2)?,
+                title: r.get(3)?,
+                published_at: r.get::<_, Option<String>>(4)?.map(|s| from_text(&s)).transpose()?,
+                first_seen_at: from_text(&r.get::<_, String>(5)?)?,
+                word_count: r.get(6)?,
+                mark: r.get::<_, Option<bool>>(7)?,
+            })
+        })?;
+        Ok(rows.collect::<rusqlite::Result<_>>()?)
+    }
+
+    pub fn entries(&self) -> Result<Vec<Entry>> {
+        self.entries_where("", [])
+    }
+
+    pub fn entry(&self, id: i64) -> Result<Option<Entry>> {
+        Ok(self.entries_where("WHERE e.id = ?1", params![id])?.into_iter().next())
+    }
+
+    /// Marks an entry read or unread; returns false if there is no such entry.
+    pub fn set_mark(&self, id: i64, read: bool, now: DateTime<Utc>) -> Result<bool> {
+        if self.entry(id)?.is_none() {
+            return Ok(false);
+        }
         self.conn.execute(
-            "INSERT INTO sources (url, title, tags) VALUES (?1, ?2, ?3)",
-            params![url, title, tags_json],
+            "INSERT OR REPLACE INTO marks (entry_id, read, marked_at) VALUES (?1, ?2, ?3)",
+            params![id, read, to_text(now)],
         )?;
-        Ok(self.conn.last_insert_rowid())
+        Ok(true)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use chrono::{Duration, TimeZone};
+
+    fn now() -> DateTime<Utc> {
+        Utc.with_ymd_and_hms(2026, 10, 1, 12, 0, 0).unwrap()
     }
 
-    pub fn get_sources(&self) -> Result<Vec<Source>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, url, title, tags, last_updated FROM sources")?;
-        let sources = stmt
-            .query_map([], |row| {
-                let tags_json: String = row.get(3)?;
-                let last_updated: Option<String> = row.get(4)?;
-                Ok(Source {
-                    id: row.get(0)?,
-                    url: row.get(1)?,
-                    title: row.get(2)?,
-                    tags: serde_json::from_str(&tags_json).unwrap_or_default(),
-                    last_updated: last_updated
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(sources)
-    }
-
-    pub fn get_source(&self, id: i64) -> Result<Option<Source>> {
-        let mut stmt = self
-            .conn
-            .prepare("SELECT id, url, title, tags, last_updated FROM sources WHERE id = ?1")?;
-        let mut rows = stmt.query(params![id])?;
-        if let Some(row) = rows.next()? {
-            let tags_json: String = row.get(3)?;
-            let last_updated: Option<String> = row.get(4)?;
-            Ok(Some(Source {
-                id: row.get(0)?,
-                url: row.get(1)?,
-                title: row.get(2)?,
-                tags: serde_json::from_str(&tags_json).unwrap_or_default(),
-                last_updated: last_updated
-                    .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                    .map(|dt| dt.with_timezone(&Utc)),
-            }))
-        } else {
-            Ok(None)
+    fn entry<'a>(source: &'a str, key: &'a str) -> NewEntry<'a> {
+        NewEntry {
+            source_url: source,
+            entry_key: key,
+            url: Some("https://example.com/a"),
+            title: "A",
+            published_at: Some(now() - Duration::hours(1)),
+            word_count: None,
         }
     }
 
-    pub fn update_source_tags(&self, id: i64, tags: &HashSet<String>) -> Result<()> {
-        let tags_json = serde_json::to_string(tags)?;
-        self.conn.execute(
-            "UPDATE sources SET tags = ?1 WHERE id = ?2",
-            params![tags_json, id],
-        )?;
-        Ok(())
+    #[test]
+    fn entries_are_unique_per_source_not_per_url() {
+        let db = Database::open_in_memory(None).unwrap();
+        assert!(db.insert_entry(&entry("s1", "k"), now()).unwrap());
+        assert!(!db.insert_entry(&entry("s1", "k"), now()).unwrap());
+        // Same entry, same URL, a second feed: kept.
+        assert!(db.insert_entry(&entry("s2", "k"), now()).unwrap());
+        assert_eq!(db.entries().unwrap().len(), 2);
     }
 
-    pub fn update_source_timestamp(&self, id: i64, timestamp: DateTime<Utc>) -> Result<()> {
-        self.conn.execute(
-            "UPDATE sources SET last_updated = ?1 WHERE id = ?2",
-            params![timestamp.to_rfc3339(), id],
-        )?;
-        Ok(())
+    #[test]
+    fn marks_round_trip() {
+        let db = Database::open_in_memory(None).unwrap();
+        db.insert_entry(&entry("s", "k"), now()).unwrap();
+        let id = db.entries().unwrap()[0].id;
+        assert_eq!(db.entry(id).unwrap().unwrap().mark, None);
+        assert!(db.set_mark(id, true, now()).unwrap());
+        assert_eq!(db.entry(id).unwrap().unwrap().mark, Some(true));
+        assert!(db.set_mark(id, false, now()).unwrap());
+        assert_eq!(db.entry(id).unwrap().unwrap().mark, Some(false));
+        assert!(!db.set_mark(9999, true, now()).unwrap());
     }
 
-    // === Articles ===
-
-    pub fn add_article(&self, article: &Article) -> Result<i64> {
-        let tags_json = serde_json::to_string(&article.tags)?;
-        let published = article.published_at.map(|d| d.to_rfc3339());
-        self.conn.execute(
-            r#"INSERT OR IGNORE INTO articles
-               (source_id, url, title, content, published_at, word_count, tags, read)
-               VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)"#,
-            params![
-                article.source_id,
-                article.url,
-                article.title,
-                article.content,
-                published,
-                article.word_count,
-                tags_json,
-                article.read as i32,
-            ],
-        )?;
-        Ok(self.conn.last_insert_rowid())
+    #[test]
+    fn failed_fetch_keeps_the_last_title() {
+        let db = Database::open_in_memory(None).unwrap();
+        db.record_fetch("s", Some("Title"), now(), None).unwrap();
+        db.record_fetch("s", None, now(), Some("timeout")).unwrap();
+        let f = &db.fetches().unwrap()["s"];
+        assert_eq!(f.feed_title.as_deref(), Some("Title"));
+        assert_eq!(f.error.as_deref(), Some("timeout"));
     }
 
-    pub fn article_exists(&self, url: &str) -> Result<bool> {
-        let count: i64 = self.conn.query_row(
-            "SELECT COUNT(*) FROM articles WHERE url = ?1",
-            params![url],
-            |row| row.get(0),
-        )?;
-        Ok(count > 0)
-    }
-
-    pub fn get_articles(&self) -> Result<Vec<Article>> {
-        let mut stmt = self.conn.prepare(
-            r#"SELECT id, source_id, url, title, content, published_at, word_count, tags, read
-               FROM articles ORDER BY published_at DESC"#,
-        )?;
-        let articles = stmt
-            .query_map([], |row| {
-                let tags_json: String = row.get(7)?;
-                let published: Option<String> = row.get(5)?;
-                let read_int: i32 = row.get(8)?;
-                Ok(Article {
-                    id: row.get(0)?,
-                    source_id: row.get(1)?,
-                    url: row.get(2)?,
-                    title: row.get(3)?,
-                    content: row.get(4)?,
-                    published_at: published
-                        .and_then(|s| DateTime::parse_from_rfc3339(&s).ok())
-                        .map(|dt| dt.with_timezone(&Utc)),
-                    word_count: row.get(6)?,
-                    tags: serde_json::from_str(&tags_json).unwrap_or_default(),
-                    read: read_int != 0,
-                })
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(articles)
-    }
-
-    pub fn update_article_tags(&self, id: i64, tags: &HashSet<String>) -> Result<()> {
-        let tags_json = serde_json::to_string(tags)?;
-        self.conn.execute(
-            "UPDATE articles SET tags = ?1 WHERE id = ?2",
-            params![tags_json, id],
-        )?;
-        Ok(())
-    }
-
-    pub fn mark_read(&self, id: i64, read: bool) -> Result<()> {
-        self.conn.execute(
-            "UPDATE articles SET read = ?1 WHERE id = ?2",
-            params![read as i32, id],
-        )?;
-        Ok(())
-    }
-
-    // === Rules ===
-
-    pub fn add_rule(&self, rule: &Rule) -> Result<i64> {
-        let json = serde_json::to_string(rule)?;
-        self.conn
-            .execute("INSERT INTO rules (rule_json) VALUES (?1)", params![json])?;
-        Ok(self.conn.last_insert_rowid())
-    }
-
-    pub fn get_rules(&self) -> Result<Vec<(i64, Rule)>> {
-        let mut stmt = self.conn.prepare("SELECT id, rule_json FROM rules")?;
-        let rules = stmt
-            .query_map([], |row| {
-                let id: i64 = row.get(0)?;
-                let json: String = row.get(1)?;
-                let rule: Rule = serde_json::from_str(&json).unwrap();
-                Ok((id, rule))
-            })?
-            .collect::<Result<Vec<_>, _>>()?;
-        Ok(rules)
-    }
-
-    pub fn delete_rule(&self, id: i64) -> Result<()> {
-        self.conn
-            .execute("DELETE FROM rules WHERE id = ?1", params![id])?;
-        Ok(())
+    #[test]
+    fn a_new_database_file_records_rebuilt_at_once() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("nested/tagrss.db");
+        let db = Database::open(&path, now()).unwrap();
+        assert_eq!(db.rebuilt_at().unwrap(), Some(now()));
+        drop(db);
+        let reopened = Database::open(&path, now() + Duration::days(1)).unwrap();
+        assert_eq!(reopened.rebuilt_at().unwrap(), Some(now()));
     }
 }

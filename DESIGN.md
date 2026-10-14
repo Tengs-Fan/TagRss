@@ -68,7 +68,7 @@ User tags must not start with `source/`, `age/`, `length/`, or `state/`; the fil
 | `length/short` | Under 500 words |
 | `length/medium` | 500 to 2999 words |
 | `length/long` | 3000 words or more |
-| `length/unknown` | The feed gave no text to count, which is typical of video feeds |
+| `length/unknown` | The feed gave no full text to count: video feeds, and feeds that send only a summary |
 | `state/read` | Marked read |
 | `state/unread` | Not marked read |
 
@@ -117,9 +117,10 @@ entries (
   UNIQUE (source_url, entry_key)
 )
 
-reads (
-  entry_id  INTEGER PRIMARY KEY REFERENCES entries(id),
-  read_at   TEXT NOT NULL
+marks (
+  entry_id   INTEGER PRIMARY KEY REFERENCES entries(id),
+  read       INTEGER NOT NULL,         -- 1 marked read, 0 marked unread
+  marked_at  TEXT NOT NULL
 )
 
 fetches (
@@ -136,7 +137,8 @@ meta (
 ```
 
 Entries are written once and never rewritten.
-Mark read inserts a row into `reads`; mark unread deletes it.
+Mark read and mark unread both write a row into `marks`, recording which one.
+Unread is recorded explicitly, not as a missing row, because an explicit mark must override the rebuild rule below: an old entry treated as read after a rebuild can still be marked unread.
 There is no `sources` table, no `rules` table, and no tag column anywhere.
 
 `fetches` is a cache of the last sync per source, rewritten by every sync and never a source of truth.
@@ -152,10 +154,12 @@ Such entries have no source tags and appear only in folders whose rules match on
 ### Word count
 
 Content is not stored, so `word_count` is computed once at fetch time and cannot be recomputed later.
-It counts words in the entry's content, falling back to its summary, after stripping HTML; plain text without any markup must count correctly.
+It counts words in the entry's full content (RSS `content:encoded`, Atom `content`) after stripping HTML; plain text without any markup must count correctly.
+A summary (RSS `description`, Atom `summary`) is not counted: in practice it is a teaser or a bare link, so counting it would tag a long Distill article `length/short`.
+Feeds that send only a summary therefore get `length/unknown`, including the few whose summaries are the whole post.
 Chinese and Japanese are written without spaces, so each Han, Hiragana, or Katakana character counts as one word; everything else is split on whitespace.
 This makes a 3000-character Chinese article `length/long` rather than `length/short`; the thresholds may need tuning for Chinese once real counts are seen.
-When neither content nor summary exists, `word_count` is NULL and the entry gets `length/unknown`.
+When there is no full content, `word_count` is NULL and the entry gets `length/unknown`.
 
 ### Losing the database
 
@@ -173,7 +177,7 @@ The first sync therefore starts at inbox zero: only entries published after inst
 Paths never depend on the working directory.
 
 - Config: `$XDG_CONFIG_HOME/tagrss/tagrss.toml` (default `~/.config/tagrss/tagrss.toml`), overridable with `--config`.
-- Database: `$XDG_DATA_HOME/tagrss/tagrss.db` (default `~/.local/share/tagrss/tagrss.db`), created if missing.
+- Database: `$XDG_DATA_HOME/tagrss/tagrss.db` (default `~/.local/share/tagrss/tagrss.db`), created if missing, overridable with `--db`.
 
 ## Commands
 
@@ -199,7 +203,7 @@ Each of these can be added later without changing the contract above: content st
 
 ## Changes from the current code
 
-Kept: the rule expression parser (`folder.rs`) and hierarchical tag matching (`Article::match_tag`).
+Kept: the rule expression parser, now `rule.rs` and rejecting trailing tokens such as `a b`; hierarchical tag matching, now `tags::tag_matches`; the OPML reader, now unescaping attribute values.
 
 Removed: `rules.yaml` and the `rules` table, the `sources` table as a source of truth, stored tag columns, `content` storage, the `rule` and `set-tags` commands, and `folders.yaml` / `feeds.opml` as separate files.
 
