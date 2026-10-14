@@ -74,22 +74,25 @@ pub fn slug(title: &str) -> String {
 
 /// The facts about one entry that its tags are computed from.
 pub struct Facts<'a> {
-    pub source_tags: &'a [String],
-    pub source_title: &'a str,
-    pub published_at: Option<DateTime<Utc>>,
-    pub first_seen_at: DateTime<Utc>,
+    /// The union of the tags of every source the entry came from.
+    pub source_tags: &'a HashSet<String>,
+    /// The display title of every source the entry came from.
+    pub source_titles: &'a [String],
+    /// The entry's date: its earliest publish date, else when it was first seen.
+    pub date: DateTime<Utc>,
     pub word_count: Option<u32>,
     pub read: bool,
 }
 
-/// An entry's tags: its source's tags plus the system tags, as of `now`.
+/// An entry's tags: its sources' tags plus the system tags, as of `now`.
 pub fn compute(facts: &Facts, now: DateTime<Utc>) -> HashSet<String> {
-    let mut tags: HashSet<String> = facts.source_tags.iter().cloned().collect();
-    tags.insert(format!("source/{}", slug(facts.source_title)));
+    let mut tags = facts.source_tags.clone();
+    for title in facts.source_titles {
+        tags.insert(format!("source/{}", slug(title)));
+    }
 
-    // A publish date in the future (clock skew, time zones) counts as just published.
-    let when = facts.published_at.unwrap_or(facts.first_seen_at);
-    let age = (now - when).max(Duration::zero());
+    // A date in the future (clock skew, time zones) counts as just published.
+    let age = (now - facts.date).max(Duration::zero());
     if age < Duration::days(1) {
         tags.insert("age/today".into());
     }
@@ -110,19 +113,6 @@ pub fn compute(facts: &Facts, now: DateTime<Utc>) -> HashSet<String> {
 
     tags.insert(if facts.read { "state/read" } else { "state/unread" }.into());
     tags
-}
-
-/// Whether an entry counts as read: an explicit mark wins, otherwise anything from before a rebuild is read.
-pub fn is_read(
-    mark: Option<bool>,
-    published_at: Option<DateTime<Utc>>,
-    first_seen_at: DateTime<Utc>,
-    rebuilt_at: Option<DateTime<Utc>>,
-) -> bool {
-    match mark {
-        Some(read) => read,
-        None => rebuilt_at.is_some_and(|r| published_at.unwrap_or(first_seen_at) < r),
-    }
 }
 
 #[cfg(test)]
@@ -165,71 +155,50 @@ mod tests {
         assert_eq!(slug("--- !!! ---"), "untitled");
     }
 
-    fn facts(published_hours_ago: Option<i64>, words: Option<u32>, read: bool, now: DateTime<Utc>) -> Facts<'static> {
-        Facts {
-            source_tags: &[],
-            source_title: "Feed",
-            published_at: published_hours_ago.map(|h| now - Duration::hours(h)),
-            first_seen_at: now - Duration::hours(2),
+    fn tags_at(hours_ago: i64, words: Option<u32>, read: bool) -> HashSet<String> {
+        let now = Utc.with_ymd_and_hms(2026, 10, 1, 12, 0, 0).unwrap();
+        let none = HashSet::new();
+        let titles = vec!["Feed".to_string()];
+        let facts = Facts {
+            source_tags: &none,
+            source_titles: &titles,
+            date: now - Duration::hours(hours_ago),
             word_count: words,
             read,
-        }
+        };
+        compute(&facts, now)
     }
 
     #[test]
     fn age_tags_overlap_and_clamp_future_dates() {
-        let now = Utc.with_ymd_and_hms(2026, 10, 1, 12, 0, 0).unwrap();
-        let today = compute(&facts(Some(3), None, false, now), now);
+        let today = tags_at(3, None, false);
         assert!(today.contains("age/today") && today.contains("age/week") && today.contains("age/month"));
-        let week = compute(&facts(Some(72), None, false, now), now);
+        let week = tags_at(72, None, false);
         assert!(!week.contains("age/today") && week.contains("age/week"));
-        let old = compute(&facts(Some(24 * 40), None, false, now), now);
-        assert!(!old.iter().any(|t| t.starts_with("age/")));
-        let future = compute(&facts(Some(-48), None, false, now), now);
-        assert!(future.contains("age/today"));
-        // No publish date: first_seen_at (2 hours ago) is used.
-        assert!(compute(&facts(None, None, false, now), now).contains("age/today"));
+        assert!(!tags_at(24 * 40, None, false).iter().any(|t| t.starts_with("age/")));
+        assert!(tags_at(-48, None, false).contains("age/today"));
     }
 
     #[test]
     fn length_and_state_tags() {
-        let now = Utc::now();
-        let tags = |w, r| compute(&facts(Some(1), w, r, now), now);
-        assert!(tags(None, false).contains("length/unknown"));
-        assert!(tags(Some(0), false).contains("length/short"));
-        assert!(tags(Some(499), false).contains("length/short"));
-        assert!(tags(Some(500), false).contains("length/medium"));
-        assert!(tags(Some(3000), false).contains("length/long"));
-        assert!(tags(None, true).contains("state/read"));
-        assert!(tags(None, false).contains("state/unread"));
+        assert!(tags_at(1, None, false).contains("length/unknown"));
+        assert!(tags_at(1, Some(0), false).contains("length/short"));
+        assert!(tags_at(1, Some(499), false).contains("length/short"));
+        assert!(tags_at(1, Some(500), false).contains("length/medium"));
+        assert!(tags_at(1, Some(3000), false).contains("length/long"));
+        assert!(tags_at(1, None, true).contains("state/read"));
+        assert!(tags_at(1, None, false).contains("state/unread"));
     }
 
     #[test]
-    fn source_tags_and_slug_are_included() {
+    fn every_source_contributes_tags_and_a_slug() {
         let now = Utc::now();
-        let source_tags = vec!["topic/ai".to_string()];
-        let f = Facts {
-            source_tags: &source_tags,
-            source_title: "Distill",
-            published_at: None,
-            first_seen_at: now,
-            word_count: None,
-            read: false,
-        };
-        let tags = compute(&f, now);
-        assert!(tags.contains("topic/ai") && tags.contains("source/distill"));
-    }
-
-    #[test]
-    fn explicit_marks_override_the_rebuild_rule() {
-        let rebuilt = Utc.with_ymd_and_hms(2026, 10, 1, 0, 0, 0).unwrap();
-        let before = Some(rebuilt - Duration::days(1));
-        let after = Some(rebuilt + Duration::days(1));
-        let seen = rebuilt;
-        assert!(is_read(None, before, seen, Some(rebuilt)));
-        assert!(!is_read(None, after, seen, Some(rebuilt)));
-        assert!(!is_read(Some(false), before, seen, Some(rebuilt)));
-        assert!(is_read(Some(true), after, seen, Some(rebuilt)));
-        assert!(!is_read(None, before, seen, None));
+        let source_tags = set(&["topic/ai", "format/filter"]);
+        let titles = vec!["Distill".to_string(), "Lobsters graphics".to_string()];
+        let facts = Facts { source_tags: &source_tags, source_titles: &titles, date: now, word_count: None, read: false };
+        let tags = compute(&facts, now);
+        for t in ["topic/ai", "format/filter", "source/distill", "source/lobsters-graphics"] {
+            assert!(tags.contains(t), "missing {t}");
+        }
     }
 }

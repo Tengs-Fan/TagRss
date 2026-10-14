@@ -1,4 +1,4 @@
-//! Fetching and parsing feeds, and syncing their entries into the database.
+//! Fetching and parsing feeds, and syncing their items into the database.
 
 use anyhow::Result;
 use chrono::{DateTime, Utc};
@@ -6,7 +6,7 @@ use futures::stream::{self, StreamExt};
 use std::time::Duration;
 
 use crate::config::Config;
-use crate::db::{Database, NewEntry};
+use crate::db::{Database, NewObservation};
 
 const CONCURRENT_FETCHES: usize = 8;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
@@ -15,12 +15,12 @@ const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 #[derive(Debug)]
 pub struct ParsedFeed {
     pub title: Option<String>,
-    pub entries: Vec<ParsedEntry>,
+    pub items: Vec<ParsedItem>,
 }
 
 #[derive(Debug)]
-pub struct ParsedEntry {
-    pub key: String,
+pub struct ParsedItem {
+    pub item_key: String,
     pub url: Option<String>,
     pub title: String,
     pub published_at: Option<DateTime<Utc>>,
@@ -30,7 +30,7 @@ pub struct ParsedEntry {
 pub fn parse(bytes: &[u8]) -> Result<ParsedFeed> {
     let feed = feed_rs::parser::parse(bytes)?;
     let title = feed.title.map(|t| clean(&t.content)).filter(|t| !t.is_empty());
-    let entries = feed
+    let items = feed
         .entries
         .into_iter()
         .map(|e| {
@@ -41,15 +41,15 @@ pub fn parse(bytes: &[u8]) -> Result<ParsedFeed> {
                 .filter(|t| !t.is_empty())
                 .unwrap_or_else(|| "Untitled".to_string());
             // feed-rs generates an id when the feed gives none; the link and title are a last resort.
-            let key = Some(e.id)
+            let item_key = Some(e.id)
                 .filter(|id| !id.is_empty())
                 .or_else(|| url.clone())
                 .unwrap_or_else(|| title.clone());
             // Only full content is counted. A summary is usually a teaser or a bare link
             // (Distill, aggregators), and counting it would tag long articles length/short.
             let text = e.content.and_then(|c| c.body).filter(|b| !b.trim().is_empty());
-            ParsedEntry {
-                key,
+            ParsedItem {
+                item_key,
                 url,
                 title,
                 published_at: e.published.or(e.updated),
@@ -57,7 +57,7 @@ pub fn parse(bytes: &[u8]) -> Result<ParsedFeed> {
             }
         })
         .collect();
-    Ok(ParsedFeed { title, entries })
+    Ok(ParsedFeed { title, items })
 }
 
 /// Decodes HTML entities (some feeds escape titles twice, leaving `&rsquo;` behind) and collapses whitespace.
@@ -118,15 +118,19 @@ pub async fn fetch(client: &reqwest::Client, url: &str) -> Result<ParsedFeed> {
     parse(&bytes)
 }
 
-/// The outcome of syncing one source.
-pub struct SyncResult {
-    pub url: String,
-    pub outcome: Result<usize>,
+/// Progress of a sync, reported as each source finishes.
+#[derive(Debug, Clone)]
+pub enum SyncEvent {
+    Started { sources: usize },
+    Fetched { url: String, new_observations: usize },
+    Failed { url: String, error: String },
 }
 
-/// Fetches every configured source and stores new entries; one failing feed never stops the rest.
-pub async fn sync(config: &Config, db: &Database, now: DateTime<Utc>) -> Result<Vec<SyncResult>> {
+/// Fetches every configured source and stores new observations; one failing feed never stops the rest.
+/// Only database errors are returned; feed errors are recorded on the source and reported as events.
+pub async fn sync(config: &Config, db: &Database, now: DateTime<Utc>, on_event: &mut dyn FnMut(SyncEvent)) -> Result<()> {
     let client = client()?;
+    on_event(SyncEvent::Started { sources: config.sources.len() });
     let mut fetches = stream::iter(&config.sources)
         .map(|source| {
             let client = &client;
@@ -134,32 +138,34 @@ pub async fn sync(config: &Config, db: &Database, now: DateTime<Utc>) -> Result<
         })
         .buffer_unordered(CONCURRENT_FETCHES);
 
-    let mut results = Vec::new();
     while let Some((url, fetched)) = fetches.next().await {
-        let outcome = match fetched {
-            Ok(feed) => store(db, &url, &feed, now),
-            Err(e) => {
-                db.record_fetch(&url, None, now, Some(&format!("{e:#}")))?;
-                Err(e)
+        match fetched {
+            Ok(feed) => {
+                let new_observations = store(db, &url, &feed, now)?;
+                on_event(SyncEvent::Fetched { url, new_observations });
             }
-        };
-        results.push(SyncResult { url, outcome });
+            Err(e) => {
+                let error = format!("{e:#}");
+                db.record_fetch(&url, None, now, Some(&error))?;
+                on_event(SyncEvent::Failed { url, error });
+            }
+        }
     }
-    Ok(results)
+    Ok(())
 }
 
 fn store(db: &Database, url: &str, feed: &ParsedFeed, now: DateTime<Utc>) -> Result<usize> {
     let mut added = 0;
-    for e in &feed.entries {
-        let entry = NewEntry {
+    for item in &feed.items {
+        let observation = NewObservation {
             source_url: url,
-            entry_key: &e.key,
-            url: e.url.as_deref(),
-            title: &e.title,
-            published_at: e.published_at,
-            word_count: e.word_count,
+            item_key: &item.item_key,
+            url: item.url.as_deref(),
+            title: &item.title,
+            published_at: item.published_at,
+            word_count: item.word_count,
         };
-        if db.insert_entry(&entry, now)? {
+        if db.insert_observation(&observation, now)? {
             added += 1;
         }
     }
@@ -204,15 +210,15 @@ mod tests {
     fn parses_rss_without_dropping_entries() {
         let feed = parse(RSS.as_bytes()).unwrap();
         assert_eq!(feed.title.as_deref(), Some("Example Blog"));
-        assert_eq!(feed.entries.len(), 2);
-        let a = &feed.entries[0];
-        assert_eq!(a.key, "a-1");
+        assert_eq!(feed.items.len(), 2);
+        let a = &feed.items[0];
+        assert_eq!(a.item_key, "a-1");
         assert_eq!(a.url.as_deref(), Some("https://example.com/a"));
         // A description is a summary, not the article: its length is unknown.
         assert_eq!(a.word_count, None);
         assert!(a.published_at.is_some());
-        let b = &feed.entries[1];
-        assert_eq!(b.key, "b-2");
+        let b = &feed.items[1];
+        assert_eq!(b.item_key, "b-2");
         assert_eq!(b.url, None);
         assert_eq!(b.word_count, None);
     }
@@ -238,14 +244,14 @@ mod tests {
         let rss = r#"<?xml version="1.0"?><rss version="2.0"><channel><title>T</title>
   <item><guid>1</guid><title>shoutout to &amp;ldquo;overmorrow&amp;rdquo; &amp;amp; I&amp;rsquo;m</title></item>
 </channel></rss>"#;
-        assert_eq!(parse(rss.as_bytes()).unwrap().entries[0].title, "shoutout to \u{201c}overmorrow\u{201d} & I\u{2019}m");
+        assert_eq!(parse(rss.as_bytes()).unwrap().items[0].title, "shoutout to \u{201c}overmorrow\u{201d} & I\u{2019}m");
     }
 
     #[test]
     fn video_entries_have_unknown_length() {
         let feed = parse(YOUTUBE.as_bytes()).unwrap();
-        let e = &feed.entries[0];
-        assert_eq!(e.key, "yt:video:abc123");
+        let e = &feed.items[0];
+        assert_eq!(e.item_key, "yt:video:abc123");
         assert_eq!(e.word_count, None);
         assert_eq!(e.published_at.unwrap().to_rfc3339(), "2026-10-05T10:00:00+00:00");
     }
@@ -259,7 +265,7 @@ mod tests {
     <content:encoded><![CDATA[<p>The full post has six words.</p>]]></content:encoded>
   </item>
 </channel></rss>"#;
-        assert_eq!(parse(rss.as_bytes()).unwrap().entries[0].word_count, Some(6));
+        assert_eq!(parse(rss.as_bytes()).unwrap().items[0].word_count, Some(6));
     }
 
     #[test]
@@ -271,6 +277,6 @@ mod tests {
     <content type="html">&lt;p&gt;one two three&lt;/p&gt;</content>
   </entry>
 </feed>"#;
-        assert_eq!(parse(atom.as_bytes()).unwrap().entries[0].word_count, Some(3));
+        assert_eq!(parse(atom.as_bytes()).unwrap().items[0].word_count, Some(3));
     }
 }
