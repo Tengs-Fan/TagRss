@@ -14,7 +14,7 @@
 #   length/short    under 500 words
 #   length/medium   500 to 2999 words
 #   length/long     3000 words or more
-#   length/unknown  the feed gave no text, typical of video feeds
+#   length/unknown  the feed gave no full text: video feeds, and feeds that send only a summary
 #   state/read      marked read
 #   state/unread    not marked read
 
