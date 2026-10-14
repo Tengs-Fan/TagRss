@@ -226,6 +226,7 @@ Reading:
 Sync:
 
 - One failing feed never stops the others; feeds are fetched 8 at a time with a 30-second timeout, and each failure is recorded on its source.
+- At most 2 requests go to the same host at once, and sources are queued round-robin across hosts; 8 parallel requests to lobste.rs, which hosts 17 of the sources, were answered with 429 Too Many Requests.
 - Syncing twice adds nothing, and an interrupted sync keeps what it stored.
 - Sync never deletes or rewrites observations, and nothing is ever pruned.
 - Sync reports an event per source as it finishes.

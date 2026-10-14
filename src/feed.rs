@@ -3,12 +3,17 @@
 use anyhow::Result;
 use chrono::{DateTime, Utc};
 use futures::stream::{self, StreamExt};
+use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Duration;
+use tokio::sync::Semaphore;
 
 use crate::config::Config;
 use crate::db::{Database, NewObservation};
 
 const CONCURRENT_FETCHES: usize = 8;
+/// Hosts rate-limit: 8 parallel requests to lobste.rs got 429 Too Many Requests.
+const FETCHES_PER_HOST: usize = 2;
 const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
 
 /// What a feed said, reduced to the metadata TagRss keeps.
@@ -131,10 +136,19 @@ pub enum SyncEvent {
 pub async fn sync(config: &Config, db: &Database, now: DateTime<Utc>, on_event: &mut dyn FnMut(SyncEvent)) -> Result<()> {
     let client = client()?;
     on_event(SyncEvent::Started { sources: config.sources.len() });
-    let mut fetches = stream::iter(&config.sources)
-        .map(|source| {
+    let urls: Vec<&str> = config.sources.iter().map(|s| s.url.as_str()).collect();
+    let mut per_host: HashMap<String, Arc<Semaphore>> = HashMap::new();
+    let mut fetches = stream::iter(interleave_by_host(&urls))
+        .map(|url| {
             let client = &client;
-            async move { (source.url.clone(), fetch(client, &source.url).await) }
+            let host = per_host
+                .entry(host_of(url))
+                .or_insert_with(|| Arc::new(Semaphore::new(FETCHES_PER_HOST)))
+                .clone();
+            async move {
+                let _permit = host.acquire().await;
+                (url.to_string(), fetch(client, url).await)
+            }
         })
         .buffer_unordered(CONCURRENT_FETCHES);
 
@@ -152,6 +166,35 @@ pub async fn sync(config: &Config, db: &Database, now: DateTime<Utc>, on_event: 
         }
     }
     Ok(())
+}
+
+fn host_of(url: &str) -> String {
+    url::Url::parse(url)
+        .ok()
+        .and_then(|u| u.host_str().map(str::to_string))
+        .unwrap_or_else(|| url.to_string())
+}
+
+/// Orders URLs round-robin across hosts, so feeds sharing a host (17 Lobsters tag feeds,
+/// 131 YouTube channels) are spread out instead of queueing behind each other.
+fn interleave_by_host<'a>(urls: &[&'a str]) -> Vec<&'a str> {
+    let mut hosts: Vec<(String, std::collections::VecDeque<&'a str>)> = Vec::new();
+    for url in urls {
+        let host = host_of(url);
+        match hosts.iter_mut().find(|(h, _)| *h == host) {
+            Some((_, queue)) => queue.push_back(url),
+            None => hosts.push((host, std::collections::VecDeque::from([*url]))),
+        }
+    }
+    let mut out = Vec::with_capacity(urls.len());
+    while out.len() < urls.len() {
+        for (_, queue) in hosts.iter_mut() {
+            if let Some(url) = queue.pop_front() {
+                out.push(url);
+            }
+        }
+    }
+    out
 }
 
 fn store(db: &Database, url: &str, feed: &ParsedFeed, now: DateTime<Utc>) -> Result<usize> {
@@ -176,6 +219,16 @@ fn store(db: &Database, url: &str, feed: &ParsedFeed, now: DateTime<Utc>) -> Res
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn interleaves_sources_across_hosts() {
+        let urls = ["https://a.com/1", "https://a.com/2", "https://a.com/3", "https://b.com/1", "https://c.com/1", "https://b.com/2"];
+        assert_eq!(
+            interleave_by_host(&urls),
+            vec!["https://a.com/1", "https://b.com/1", "https://c.com/1", "https://a.com/2", "https://b.com/2", "https://a.com/3"]
+        );
+        assert!(interleave_by_host(&[]).is_empty());
+    }
 
     #[test]
     fn counts_plain_text_html_and_cjk() {
