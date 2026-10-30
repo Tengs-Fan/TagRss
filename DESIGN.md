@@ -247,8 +247,19 @@ Paths never depend on the working directory.
 
 ## Commands
 
-Running `tagrss` with no command opens the terminal user interface, which is where reading happens.
-The commands are a second user interface over the same core, split by role.
+Running `tagrss` with no command starts the web reader and opens it in the browser, which is where reading happens.
+`tagrss tui` opens the same reader in the terminal.
+The commands are a third user interface over the same core, split by role.
+
+### Web reader
+
+The binary serves one embedded page and a small JSON API over the core on `127.0.0.1`, on a free port unless `--port` is given; `--no-browser` skips opening the browser.
+It listens on loopback only, so other machines cannot reach it.
+The API is internal to the page and carries no stability promise.
+
+The page shows folders with unread counts, the selected folder's entries, and a Sources view listing every source with its last fetch error.
+Clicking an entry or pressing Enter opens its link in a new tab and marks it read; the keys match the terminal reader, plus `J`/`K` to change folder and `/` to filter titles.
+Sync runs on its own thread, the page polls its progress, and only one sync runs at a time.
 
 **Operations** are stable, because they get scripted, for example `sync` from launchd or cron:
 

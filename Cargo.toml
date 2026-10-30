@@ -20,6 +20,10 @@ unicode-width = "0.2.2"
 html-escape = "0.3.0"
 url = "2.5.8"
 ratatui = "0.30.2"
+axum = "0.8.9"
+serde_json = "1.0.154"
 
 [dev-dependencies]
+http-body-util = "0.1.5"
 tempfile = "3"
+tower = { version = "0.5.3", features = ["util"] }

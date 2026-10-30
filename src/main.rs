@@ -6,6 +6,7 @@ use unicode_width::{UnicodeWidthChar, UnicodeWidthStr};
 use tagrss::{Core, SyncEvent};
 
 mod tui;
+mod web;
 
 #[derive(Parser)]
 #[command(name = "tagrss", version, about = "A tag-based RSS reader. Run without a command to open the reader.")]
@@ -18,12 +19,22 @@ struct Cli {
     #[arg(long, global = true)]
     db: Option<PathBuf>,
 
+    /// Port for the web reader; 0 picks a free one
+    #[arg(long, default_value_t = 0)]
+    port: u16,
+
+    /// Do not open the browser when starting the web reader
+    #[arg(long)]
+    no_browser: bool,
+
     #[command(subcommand)]
     command: Option<Command>,
 }
 
 #[derive(Subcommand)]
 enum Command {
+    /// Open the reader in the terminal instead of the browser
+    Tui,
     /// Fetch every source and store new entries
     Sync,
     /// Validate the config file and print how its rules parse
@@ -64,10 +75,10 @@ fn main() -> Result<()> {
     let db_path = cli.db.unwrap_or_else(tagrss::default_db_path);
 
     let Some(command) = cli.command else {
-        let mut core = open(&config_path, &db_path)?;
-        return tui::run(&mut core);
+        return web::run(open(&config_path, &db_path)?, cli.port, !cli.no_browser);
     };
     match command {
+        Command::Tui => tui::run(&mut open(&config_path, &db_path)?),
         Command::Check => check(&config_path),
         Command::Import { opml } => {
             let report = tagrss::import_opml(&config_path, &opml)?;

@@ -18,14 +18,14 @@ pub struct Core {
     db: Database,
 }
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct FolderSummary {
     pub name: String,
     pub unread: usize,
     pub total: usize,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct SourceStatus {
     pub url: String,
     pub title: String,
@@ -34,7 +34,7 @@ pub struct SourceStatus {
     pub error: Option<String>,
 }
 
-#[derive(Debug, Clone, Default, PartialEq)]
+#[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
 pub struct SyncSummary {
     pub sources: usize,
     pub new_observations: usize,

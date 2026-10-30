@@ -1,0 +1,574 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TagRss</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23c2410c'/%3E%3Ccircle cx='10' cy='22' r='3' fill='white'/%3E%3Cpath d='M8 13a11 11 0 0 1 11 11M8 6a18 18 0 0 1 18 18' stroke='white' stroke-width='3' fill='none' stroke-linecap='round'/%3E%3C/svg%3E">
+<style>
+:root {
+  --bg: #f7f5f0;
+  --panel: #efece4;
+  --surface: #ffffff;
+  --ink: #1c1b18;
+  --ink-2: #57534a;
+  --ink-3: #8c877b;
+  --rule: #e2ddd1;
+  --accent: #c2410c;
+  --accent-soft: #fbe7dc;
+  --select: #fff4ec;
+  --ok: #3f7d4e;
+  --bad: #b42318;
+  --mono: ui-monospace, "SF Mono", "JetBrains Mono", Menlo, monospace;
+  --sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", "PingFang TC", "Noto Sans CJK TC", "Microsoft JhengHei", sans-serif;
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #151412;
+    --panel: #1b1a17;
+    --surface: #201f1b;
+    --ink: #ece8df;
+    --ink-2: #b3ad9f;
+    --ink-3: #7d786c;
+    --rule: #2e2c27;
+    --accent: #f97316;
+    --accent-soft: #3a2416;
+    --select: #2a231c;
+    --ok: #6fbf84;
+    --bad: #f0857a;
+  }
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 var(--sans);
+  -webkit-font-smoothing: antialiased;
+  display: grid;
+  grid-template-columns: 264px minmax(0, 1fr);
+  grid-template-rows: 100%;
+}
+button { font: inherit; color: inherit; }
+
+/* Sidebar */
+aside {
+  background: var(--panel);
+  border-right: 1px solid var(--rule);
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+}
+.brand {
+  display: flex; align-items: center; gap: 10px;
+  padding: 18px 18px 14px;
+  font-weight: 650; letter-spacing: -0.01em; font-size: 16px;
+}
+.brand svg { width: 22px; height: 22px; flex: none; }
+.brand small { margin-left: auto; font: 11px var(--mono); color: var(--ink-3); font-weight: 400; }
+.section-label {
+  padding: 10px 18px 6px;
+  font: 600 10.5px var(--mono);
+  letter-spacing: 0.08em; text-transform: uppercase;
+  color: var(--ink-3);
+}
+nav { overflow-y: auto; padding: 0 8px 8px; flex: 1; }
+.folder {
+  display: flex; align-items: center; gap: 8px;
+  width: 100%; border: 0; background: none; text-align: left;
+  padding: 7px 10px; border-radius: 7px; cursor: pointer;
+  color: var(--ink-2);
+}
+.folder:hover { background: color-mix(in srgb, var(--ink) 5%, transparent); }
+.folder.active { background: var(--surface); color: var(--ink); box-shadow: 0 1px 2px rgb(0 0 0 / 0.06); }
+.folder .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.folder .count { font: 12px var(--mono); color: var(--ink-3); }
+.folder.has-unread .count { color: var(--accent); font-weight: 600; }
+.folder.has-unread .name { color: var(--ink); }
+.aside-foot { border-top: 1px solid var(--rule); padding: 8px; }
+.aside-foot .folder .count.bad { color: var(--bad); font-weight: 600; }
+
+/* Main */
+main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
+header {
+  display: flex; align-items: center; gap: 12px;
+  padding: 14px 28px; border-bottom: 1px solid var(--rule);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(8px);
+}
+header h1 { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+header .sub { font: 12.5px var(--mono); color: var(--ink-3); white-space: nowrap; }
+.spacer { flex: 1; }
+.search {
+  width: 220px; max-width: 30vw;
+  border: 1px solid var(--rule); background: var(--surface); color: var(--ink);
+  border-radius: 8px; padding: 6px 10px; font: 13px var(--sans); outline: none;
+}
+.search:focus { border-color: var(--accent); }
+.btn {
+  display: inline-flex; align-items: center; gap: 7px;
+  border: 1px solid var(--rule); background: var(--surface);
+  border-radius: 8px; padding: 6px 11px; cursor: pointer; font-size: 13px; white-space: nowrap;
+}
+.btn:hover { border-color: var(--ink-3); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:disabled { opacity: 0.55; cursor: default; }
+.btn kbd { font: 10.5px var(--mono); opacity: 0.6; }
+.progress { height: 2px; background: transparent; position: relative; overflow: hidden; }
+.progress.on { background: var(--rule); }
+.progress i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); transition: width 0.4s; }
+
+.list { overflow-y: auto; flex: 1; padding: 6px 0 40px; }
+.entry {
+  display: grid; grid-template-columns: 14px 1fr auto; gap: 4px 12px;
+  padding: 11px 28px 11px 22px; border-left: 3px solid transparent; cursor: pointer;
+  scroll-margin: 60px;
+}
+.entry:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+.entry.cursor { background: var(--select); border-left-color: var(--accent); }
+.dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 8px; }
+.entry.read .dot { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
+.entry .title {
+  font-size: 15.5px; font-weight: 560; color: var(--ink); text-decoration: none; line-height: 1.35;
+  overflow-wrap: anywhere;
+}
+.entry .title:hover { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
+.entry.read .title { color: var(--ink-3); font-weight: 450; }
+.entry .when { font: 12px var(--mono); color: var(--ink-3); white-space: nowrap; padding-top: 3px; }
+.entry .meta { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--ink-3); }
+.entry .meta .src { color: var(--ink-2); }
+.tag { font: 11px var(--mono); color: var(--ink-3); }
+.tag::before { content: "#"; opacity: 0.6; }
+.more { display: block; margin: 16px auto; }
+.empty { padding: 80px 28px; text-align: center; color: var(--ink-3); }
+.empty strong { display: block; color: var(--ink-2); font-size: 16px; margin-bottom: 6px; }
+
+/* Sources view */
+table.sources { width: 100%; border-collapse: collapse; font-size: 13.5px; }
+table.sources td { padding: 9px 28px 9px 22px; border-bottom: 1px solid var(--rule); vertical-align: top; }
+table.sources td.state { white-space: nowrap; font: 12px var(--mono); width: 1%; }
+table.sources .err { color: var(--bad); font: 12px var(--mono); overflow-wrap: anywhere; }
+table.sources .okc { color: var(--ok); }
+table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wrap: anywhere; }
+
+/* Toast and help */
+.toast {
+  position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%) translateY(20px);
+  background: var(--ink); color: var(--bg); padding: 9px 16px; border-radius: 9px; font-size: 13.5px;
+  opacity: 0; transition: 0.2s; pointer-events: none; max-width: 80vw; box-shadow: 0 8px 30px rgb(0 0 0 / 0.18);
+}
+.toast.show { opacity: 1; transform: translateX(-50%); }
+.help {
+  position: fixed; inset: 0; background: rgb(0 0 0 / 0.35); display: none; place-items: center;
+}
+.help.show { display: grid; }
+.help > div { background: var(--surface); border-radius: 12px; padding: 22px 26px; min-width: 300px; box-shadow: 0 20px 60px rgb(0 0 0 / 0.3); }
+.help h2 { margin: 0 0 12px; font-size: 15px; }
+.help dl { display: grid; grid-template-columns: auto 1fr; gap: 7px 18px; margin: 0; font-size: 13.5px; }
+.help dt { font: 12px var(--mono); color: var(--accent); }
+.help dd { margin: 0; color: var(--ink-2); }
+
+.menu-btn { display: none; }
+@media (max-width: 760px) {
+  body { grid-template-columns: minmax(0, 1fr); }
+  .long { display: none; }
+  .short { display: inline !important; }
+  aside { position: fixed; inset: 0 25% 0 0; z-index: 5; transform: translateX(-100%); transition: transform 0.2s; box-shadow: 10px 0 40px rgb(0 0 0 / 0.2); }
+  body.nav-open aside { transform: none; }
+  .menu-btn { display: inline-flex; }
+  header { padding: 12px 16px; flex-wrap: wrap; }
+  .search { order: 10; width: 100%; max-width: none; }
+  .btn kbd, header .sub { display: none; }
+  .entry { padding: 11px 16px 11px 12px; }
+  table.sources td { padding: 9px 16px; }
+}
+</style>
+</head>
+<body>
+<aside>
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><circle cx="10" cy="22" r="3" fill="white"/><path d="M8 13a11 11 0 0 1 11 11M8 6a18 18 0 0 1 18 18" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
+    TagRss <small>?&nbsp;keys</small>
+  </div>
+  <div class="section-label">Folders</div>
+  <nav id="folders"></nav>
+  <div class="aside-foot"><button class="folder" id="sources-btn"><span class="name">Sources</span><span class="count" id="sources-count"></span></button></div>
+</aside>
+<main>
+  <header>
+    <button class="btn menu-btn" id="menu" aria-label="Folders">☰</button>
+    <div style="min-width:0">
+      <h1 id="title">TagRss</h1>
+      <div class="sub" id="subtitle"></div>
+    </div>
+    <div class="spacer"></div>
+    <input class="search" id="search" placeholder="Filter titles  /" autocomplete="off">
+    <button class="btn" id="mark-all" title="Mark everything in this folder read"><span class="long">Mark folder read</span><span class="short" style="display:none">Read all</span> <kbd>R</kbd></button>
+    <button class="btn primary" id="sync">Sync <kbd>s</kbd></button>
+  </header>
+  <div class="progress" id="progress"><i></i></div>
+  <div class="list" id="list"></div>
+</main>
+<div class="toast" id="toast"></div>
+<div class="help" id="help"><div>
+  <h2>Keyboard</h2>
+  <dl>
+    <dt>j / k</dt><dd>Next / previous entry</dd>
+    <dt>Enter, o</dt><dd>Open in a new tab and mark read</dd>
+    <dt>r</dt><dd>Toggle read</dd>
+    <dt>J / K</dt><dd>Next / previous folder</dd>
+    <dt>R</dt><dd>Mark the folder read</dd>
+    <dt>s</dt><dd>Sync all sources</dd>
+    <dt>c</dt><dd>Reload the config file</dd>
+    <dt>/</dt><dd>Filter titles</dd>
+    <dt>?</dt><dd>This help</dd>
+  </dl>
+</div></div>
+<script>
+const $ = (id) => document.getElementById(id);
+const PAGE = 150;
+const state = { folders: [], folder: null, view: "folder", entries: [], shown: [], cursor: 0, rendered: 0, filter: "", sources: [] };
+
+async function api(path, opts = {}) {
+  const res = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
+  const body = await res.json().catch(() => ({}));
+  if (!res.ok) throw new Error(body.error || res.statusText);
+  return body;
+}
+const post = (path, body) => api(path, { method: "POST", body: JSON.stringify(body || {}) });
+
+let toastTimer;
+function toast(text, ms = 2600) {
+  const t = $("toast");
+  t.textContent = text;
+  t.classList.add("show");
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => t.classList.remove("show"), ms);
+}
+const fail = (e) => toast(e.message || String(e), 5000);
+
+function esc(s) {
+  return String(s).replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+function ago(iso) {
+  const d = new Date(iso), s = (Date.now() - d) / 1000;
+  if (s < 3600) return Math.max(1, Math.round(s / 60)) + "m";
+  if (s < 86400) return Math.round(s / 3600) + "h";
+  if (s < 86400 * 7) return Math.round(s / 86400) + "d";
+  const opts = { month: "short", day: "numeric" };
+  if (d.getFullYear() !== new Date().getFullYear()) opts.year = "numeric";
+  return d.toLocaleDateString(undefined, opts);
+}
+
+function words(n) {
+  if (n == null) return "";
+  return n >= 1000 ? (n / 1000).toFixed(n >= 10000 ? 0 : 1) + "k words" : n + " words";
+}
+
+/* Folders */
+async function loadFolders() {
+  state.folders = await api("/api/folders");
+  renderFolders();
+}
+
+function renderFolders() {
+  const nav = $("folders");
+  if (!state.folders.length) {
+    nav.innerHTML = `<div class="empty" style="padding:20px 10px">No folders yet.<br>Add <code>[[folder]]</code> to your config, then press <b>c</b>.</div>`;
+    return;
+  }
+  nav.innerHTML = state.folders.map((f) => `
+    <button class="folder ${f.unread ? "has-unread" : ""} ${state.view === "folder" && f.name === state.folder ? "active" : ""}" data-name="${esc(f.name)}">
+      <span class="name">${esc(f.name)}</span><span class="count">${f.unread || ""}</span>
+    </button>`).join("");
+  nav.querySelectorAll(".folder").forEach((b) => b.onclick = () => { selectFolder(b.dataset.name); document.body.classList.remove("nav-open"); });
+  updateHeader();
+}
+
+function currentFolder() {
+  return state.folders.find((f) => f.name === state.folder);
+}
+
+function updateHeader() {
+  if (state.view === "sources") return;
+  const f = currentFolder();
+  $("title").textContent = f ? f.name : "TagRss";
+  $("subtitle").textContent = f ? `${f.unread} unread · ${f.total} total` : "";
+  document.title = f && f.unread ? `(${f.unread}) ${f.name} · TagRss` : "TagRss";
+}
+
+async function selectFolder(name) {
+  state.view = "folder";
+  state.folder = name;
+  try { localStorage.setItem("tagrss.folder", name); } catch (e) { /* remembering the folder is a convenience */ }
+  history.replaceState(null, "", "#" + encodeURIComponent(name));
+  $("mark-all").style.display = "";
+  $("search").style.display = "";
+  renderFolders();
+  $("sources-btn").classList.remove("active");
+  state.entries = await api("/api/entries?folder=" + encodeURIComponent(name));
+  state.cursor = 0;
+  applyFilter();
+}
+
+/* Entries */
+function applyFilter() {
+  const q = state.filter.trim().toLowerCase();
+  state.shown = q ? state.entries.filter((e) => e.title.toLowerCase().includes(q) || e.sources.join(" ").toLowerCase().includes(q)) : state.entries;
+  state.cursor = Math.min(state.cursor, Math.max(0, state.shown.length - 1));
+  state.rendered = 0;
+  $("list").innerHTML = "";
+  $("list").scrollTop = 0;
+  if (!state.shown.length) {
+    $("list").innerHTML = state.entries.length
+      ? `<div class="empty"><strong>Nothing matches “${esc(state.filter)}”</strong></div>`
+      : `<div class="empty"><strong>All caught up</strong>Nothing in this folder. Press <b>s</b> to sync.</div>`;
+    return;
+  }
+  renderMore();
+  moveCursor(state.cursor, false);
+}
+
+function entryHtml(e, i) {
+  const tags = [...e.tags].filter((t) => !/^(state|age|source|length)\//.test(t)).sort().slice(0, 4);
+  const len = words(e.word_count);
+  return `<div class="entry ${e.read ? "read" : ""}" data-i="${i}">
+    <span class="dot"></span>
+    <a class="title" href="${esc(e.url || "#")}" target="_blank" rel="noopener" data-i="${i}">${esc(e.title)}</a>
+    <span class="when" title="${esc(new Date(e.date).toLocaleString())}">${ago(e.date)}</span>
+    <div class="meta"><span class="src">${esc(e.sources.join(" · "))}</span>${len ? `<span>${len}</span>` : ""}${tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
+  </div>`;
+}
+
+function renderMore() {
+  const list = $("list");
+  list.querySelector(".more")?.remove();
+  const end = Math.min(state.shown.length, state.rendered + PAGE);
+  list.insertAdjacentHTML("beforeend", state.shown.slice(state.rendered, end).map((e, k) => entryHtml(e, state.rendered + k)).join(""));
+  state.rendered = end;
+  if (end < state.shown.length) {
+    list.insertAdjacentHTML("beforeend", `<button class="btn more">Show ${Math.min(PAGE, state.shown.length - end)} more of ${state.shown.length - end}</button>`);
+    list.querySelector(".more").onclick = renderMore;
+  }
+}
+
+function rowAt(i) {
+  return $("list").querySelector(`.entry[data-i="${i}"]`);
+}
+
+function moveCursor(i, scroll = true) {
+  if (!state.shown.length) return;
+  i = Math.max(0, Math.min(state.shown.length - 1, i));
+  while (i >= state.rendered) renderMore();
+  rowAt(state.cursor)?.classList.remove("cursor");
+  state.cursor = i;
+  const row = rowAt(i);
+  row?.classList.add("cursor");
+  if (scroll) row?.scrollIntoView({ block: "nearest" });
+}
+
+function setRowRead(i, read) {
+  state.shown[i].read = read;
+  rowAt(i)?.classList.toggle("read", read);
+}
+
+async function refreshCounts() {
+  try { await loadFolders(); } catch (e) { fail(e); }
+}
+
+/* Marks read on the server; the link itself opens through the browser, so popups are never blocked. */
+async function markOpened(i) {
+  const e = state.shown[i];
+  if (!e) return;
+  setRowRead(i, true);
+  try { await post(`/api/entries/${e.id}/open`); refreshCounts(); } catch (err) { fail(err); }
+}
+
+function openEntry(i) {
+  const e = state.shown[i];
+  if (!e || !e.url) return toast("This entry has no link");
+  window.open(e.url, "_blank", "noopener");
+  markOpened(i);
+}
+
+async function toggleRead(i) {
+  const e = state.shown[i];
+  if (!e) return;
+  const read = !e.read;
+  setRowRead(i, read);
+  try { await post(`/api/entries/${e.id}/read`, { read }); refreshCounts(); } catch (err) { setRowRead(i, !read); fail(err); }
+}
+
+async function markFolderRead() {
+  const f = currentFolder();
+  if (!f || state.view !== "folder") return;
+  if (f.unread > 50 && !confirm(`Mark ${f.unread} entries in “${f.name}” read?`)) return;
+  try {
+    const { marked } = await post("/api/folders/read", { folder: f.name });
+    state.entries.forEach((e) => e.read = true);
+    $("list").querySelectorAll(".entry").forEach((r) => r.classList.add("read"));
+    toast(`Marked ${marked} read`);
+    refreshCounts();
+  } catch (e) { fail(e); }
+}
+
+$("list").addEventListener("click", (ev) => {
+  const link = ev.target.closest("a.title");
+  const row = ev.target.closest(".entry");
+  if (!row) return;
+  const i = Number(row.dataset.i);
+  moveCursor(i, false);
+  if (link) { markOpened(i); return; }
+  openEntry(i);
+});
+
+/* Sources */
+async function showSources() {
+  state.view = "sources";
+  history.replaceState(null, "", "#sources");
+  renderFolders();
+  $("sources-btn").classList.add("active");
+  $("mark-all").style.display = "none";
+  $("search").style.display = "none";
+  const sources = await api("/api/sources");
+  state.sources = sources;
+  const failing = sources.filter((s) => s.error).length;
+  $("title").textContent = "Sources";
+  $("subtitle").textContent = `${sources.length} sources · ${failing} failing`;
+  document.title = "Sources · TagRss";
+  sources.sort((a, b) => (!!b.error - !!a.error) || a.title.localeCompare(b.title));
+  $("list").innerHTML = `<table class="sources">${sources.map((s) => `<tr>
+    <td class="state">${s.error ? '<span class="err">failed</span>' : s.fetched_at ? `<span class="okc">ok</span> ${ago(s.fetched_at)}` : "never"}</td>
+    <td><div>${esc(s.title)}</div><div class="url">${esc(s.url)}</div>${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}
+    ${s.tags.length ? `<div>${s.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join(" ")}</div>` : ""}</td></tr>`).join("")}</table>`;
+}
+
+async function updateSourcesCount() {
+  try {
+    const sources = await api("/api/sources");
+    const failing = sources.filter((s) => s.error).length;
+    const c = $("sources-count");
+    c.textContent = failing ? `${failing} failing` : sources.length;
+    c.classList.toggle("bad", failing > 0);
+  } catch (e) { /* the count is decoration */ }
+}
+$("sources-btn").onclick = () => { showSources().catch(fail); document.body.classList.remove("nav-open"); };
+
+/* Sync */
+let polling = false;
+async function startSync() {
+  try {
+    const s = await post("/api/sync");
+    showSync(s);
+    pollSync();
+  } catch (e) { fail(e); }
+}
+
+function showSync(s) {
+  const btn = $("sync");
+  const bar = $("progress");
+  if (s.running) {
+    btn.disabled = true;
+    btn.innerHTML = `Syncing ${s.done}/${s.total}`;
+    bar.classList.add("on");
+    bar.firstElementChild.style.width = s.total ? (100 * s.done / s.total) + "%" : "0";
+  } else {
+    btn.disabled = false;
+    btn.innerHTML = "Sync <kbd>s</kbd>";
+    bar.classList.remove("on");
+    bar.firstElementChild.style.width = "0";
+  }
+}
+
+async function pollSync() {
+  if (polling) return;
+  polling = true;
+  try {
+    for (;;) {
+      const s = await api("/api/sync");
+      showSync(s);
+      if (!s.running) {
+        if (s.error) fail(new Error("Sync failed: " + s.error));
+        else if (s.finished) toast(`Synced ${s.finished.sources} sources · ${s.finished.new_observations} new · ${s.finished.failed} failed`, 4000);
+        await refreshCounts();
+        updateSourcesCount();
+        if (state.view === "folder" && state.folder) await selectFolder(state.folder);
+        else if (state.view === "sources") await showSources();
+        break;
+      }
+      await new Promise((r) => setTimeout(r, 700));
+    }
+  } catch (e) { fail(e); }
+  polling = false;
+}
+$("sync").onclick = startSync;
+$("mark-all").onclick = markFolderRead;
+$("menu").onclick = () => document.body.classList.toggle("nav-open");
+
+async function reloadConfig() {
+  try {
+    const { warnings } = await post("/api/reload");
+    await loadFolders();
+    if (!currentFolder()) state.folder = state.folders[0]?.name;
+    if (state.folder) await selectFolder(state.folder);
+    updateSourcesCount();
+    toast(warnings.length ? `Config reloaded · ${warnings.length} warnings: ${warnings[0]}` : "Config reloaded", warnings.length ? 6000 : 2600);
+  } catch (e) { toast("Config invalid, kept the old one: " + e.message.split("\n").pop(), 7000); }
+}
+
+/* Keyboard */
+$("search").addEventListener("input", (e) => { state.filter = e.target.value; applyFilter(); });
+$("search").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.target.value = ""; state.filter = ""; applyFilter(); e.target.blur(); }
+  if (e.key === "Enter") e.target.blur();
+});
+
+document.addEventListener("keydown", (e) => {
+  if (e.target.tagName === "INPUT" || e.metaKey || e.ctrlKey || e.altKey) return;
+  const help = $("help");
+  if (help.classList.contains("show")) { help.classList.remove("show"); e.preventDefault(); return; }
+  const folderStep = (d) => {
+    const i = state.folders.findIndex((f) => f.name === state.folder);
+    const next = state.folders[Math.max(0, Math.min(state.folders.length - 1, i + d))];
+    if (next) selectFolder(next.name).catch(fail);
+  };
+  const keys = {
+    j: () => moveCursor(state.cursor + 1), ArrowDown: () => moveCursor(state.cursor + 1),
+    k: () => moveCursor(state.cursor - 1), ArrowUp: () => moveCursor(state.cursor - 1),
+    J: () => folderStep(1), K: () => folderStep(-1),
+    Enter: () => openEntry(state.cursor), o: () => openEntry(state.cursor),
+    r: () => toggleRead(state.cursor),
+    R: markFolderRead,
+    s: () => { if (!$("sync").disabled) startSync(); },
+    c: reloadConfig,
+    "/": () => $("search").focus(),
+    "?": () => help.classList.add("show"),
+  };
+  const action = keys[e.key];
+  if (action && (state.view === "folder" || "sc?".includes(e.key) || e.key === "J" || e.key === "K")) {
+    e.preventDefault();
+    action();
+  }
+});
+$("help").onclick = () => $("help").classList.remove("show");
+
+/* Start */
+(async () => {
+  try {
+    await loadFolders();
+    let saved = null;
+    try { saved = localStorage.getItem("tagrss.folder"); } catch (e) { /* no storage: start from the first folder */ }
+    const hash = decodeURIComponent(location.hash.slice(1));
+    const first = state.folders.find((f) => f.name === hash) || state.folders.find((f) => f.name === saved) || state.folders.find((f) => f.unread) || state.folders[0];
+    if (hash === "sources") { state.folder = first?.name; await showSources(); }
+    else if (first) await selectFolder(first.name);
+    else $("list").innerHTML = `<div class="empty"><strong>No folders yet</strong>Add <code>[[folder]]</code> entries to your config file, then press <b>c</b>.</div>`;
+    updateSourcesCount();
+    const s = await api("/api/sync");
+    if (s.running) { showSync(s); pollSync(); }
+  } catch (e) { fail(e); }
+})();
+</script>
+</body>
+</html>

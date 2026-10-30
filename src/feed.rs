@@ -119,7 +119,9 @@ pub fn client() -> Result<reqwest::Client> {
 }
 
 pub async fn fetch(client: &reqwest::Client, url: &str) -> Result<ParsedFeed> {
-    let bytes = client.get(url).send().await?.error_for_status()?.bytes().await?;
+    // The error is recorded on its source, so repeating the URL in it is noise.
+    let get = async { client.get(url).send().await?.error_for_status()?.bytes().await };
+    let bytes = get.await.map_err(reqwest::Error::without_url)?;
     parse(&bytes)
 }
 

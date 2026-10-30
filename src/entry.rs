@@ -8,7 +8,7 @@ use crate::db::{Fetch, Observation};
 use crate::tags::{self, Facts};
 
 /// An article as the user sees it.
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, serde::Serialize)]
 pub struct Entry {
     /// The smallest id among its observations; never changes as observations are added.
     pub id: i64,
