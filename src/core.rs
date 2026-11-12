@@ -171,6 +171,12 @@ impl Core {
         Ok(url)
     }
 
+    /// The entry's stored HTML for a preview, if its feeds sent any. Does not mark it read.
+    pub fn entry_content(&self, id: i64) -> Result<Option<String>> {
+        let entry = self.resolve(&[id])?.remove(0);
+        self.db.content(&entry.observation_ids)
+    }
+
     /// A sync that can run on another thread.
     pub fn syncer(&self) -> Syncer {
         Syncer { config: self.config.clone(), db_path: self.db_path.clone() }
@@ -272,6 +278,7 @@ mod tests {
                         title: key,
                         published_at: Some(now - Duration::days(days_ago)),
                         word_count: None,
+                        content: Some("<p>Body</p>"),
                     },
                     now,
                 )

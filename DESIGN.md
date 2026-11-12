@@ -154,6 +154,7 @@ observations (
   published_at   TEXT,                 -- RFC 3339; feed "published", falling back to "updated"
   first_seen_at  TEXT NOT NULL,        -- when TagRss first fetched it
   word_count     INTEGER,              -- NULL when the feed gave no full text
+  content        TEXT,                 -- HTML for the preview: the full content, else the summary
   UNIQUE (source_url, item_key)
 )
 
@@ -171,7 +172,7 @@ fetches (
 )
 ```
 
-Observations are written once and never rewritten.
+Observations are written once and never rewritten, with one exception: an observation stored before content was kept gets its content filled in by the next sync.
 Mark read and mark unread both write rows into `marks`, recording which one, and an entry with no mark is unread.
 There is no `sources` table, no `rules` table, no `entries` table, and no tag column anywhere.
 
@@ -187,7 +188,8 @@ That is consistent with it being a cache: a schema change costs the same as losi
 
 ### Word count
 
-Content is not stored, so `word_count` is computed once at fetch time and cannot be recomputed later.
+`word_count` is computed once at fetch time.
+Content is stored only to be shown in the preview pane, as the feed sent it: the full content when there is one, else the summary.
 It counts words in the item's full content (RSS `content:encoded`, Atom `content`) after stripping HTML; plain text without any markup must count correctly.
 A summary (RSS `description`, Atom `summary`) is not counted: in practice it is a teaser or a bare link, so counting it would tag a long Distill article `length/short`.
 Feeds that send only a summary therefore get `length/unknown`, including the few whose summaries are the whole post.
@@ -219,8 +221,9 @@ Reading:
 
 - Every query is computed fresh from observations, the config, and the current time, read once per query so one list is consistent; nothing is cached between queries.
 - Entries are ordered newest first by their date, ties broken by id.
-- Opening an entry marks it read and returns its link; the user interface opens the link.
-- Nothing else is implicit: viewing or scrolling past an entry never marks it.
+- Selecting an entry to preview it marks it read; so does opening its link.
+- Nothing else is implicit: scrolling past an entry never marks it.
+- When an entry has several observations, the preview shows the longest content among them.
 - Marking a folder read marks what it contains at that moment; entries that arrive later stay unread.
 
 Sync:
@@ -258,7 +261,11 @@ It listens on loopback only, so other machines cannot reach it.
 The API is internal to the page and carries no stability promise.
 
 The page shows folders with unread counts, the selected folder's entries, and a Sources view listing every source with its last fetch error.
-Clicking an entry or pressing Enter opens its link in a new tab and marks it read; the keys match the terminal reader, plus `J`/`K` to change folder and `/` to filter titles.
+The page has three panes: folders, the folder's entries, and a preview.
+Clicking an entry, or moving to it with `j`/`k`, shows its stored content in the preview pane and marks it read; opening the original in a new tab is a separate action (`Enter`, `o`, or the button in the preview).
+Feed HTML is untrusted, so the preview renders it in a sandboxed frame where scripts cannot run.
+On a narrow window the preview slides over the list and `Esc` closes it.
+The other keys match the terminal reader, plus `J`/`K` to change folder and `/` to filter titles.
 Sync runs on its own thread, the page polls its progress, and only one sync runs at a time.
 
 **Operations** are stable, because they get scripted, for example `sync` from launchd or cron:
@@ -306,11 +313,11 @@ The entry list is a snapshot: marking an entry read does not remove it from an u
 
 ## Non-goals for v1
 
-- Reading articles inside TagRss; content is not stored.
+- Fetching an article's page: the preview shows only what the feed sent, so a feed that sends a teaser previews as a teaser.
 - Tags derived from article content, such as regex rules on titles.
 - Tagging individual entries by hand.
 
-Each of these can be added later without changing the contract above: content storage is a new column, content rules and manual tags are new tag sources feeding the same rule language.
+Each of these can be added later without changing the contract above: content rules and manual tags are new tag sources feeding the same rule language.
 
 ## Changes from the current code
 

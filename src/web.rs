@@ -63,6 +63,7 @@ pub fn router(core: Core) -> Router {
         .route("/", get(|| async { Html(INDEX) }))
         .route("/api/folders", get(folders))
         .route("/api/entries", get(entries))
+        .route("/api/entries/{id}/content", get(entry_content))
         .route("/api/entries/{id}/read", post(set_read))
         .route("/api/entries/{id}/open", post(open_entry))
         .route("/api/folders/read", post(mark_folder_read))
@@ -87,6 +88,11 @@ struct FolderQuery {
 
 async fn entries(State(state): State<Shared>, Query(q): Query<FolderQuery>) -> ApiResult<Vec<tagrss::Entry>> {
     Ok(Json(core(&state).entries(&q.folder)?))
+}
+
+async fn entry_content(State(state): State<Shared>, Path(id): Path<i64>) -> ApiResult<serde_json::Value> {
+    let content = core(&state).entry_content(id)?;
+    Ok(Json(serde_json::json!({ "content": content })))
 }
 
 #[derive(Deserialize)]

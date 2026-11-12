@@ -118,7 +118,26 @@ header .sub { font: 12.5px var(--mono); color: var(--ink-3); white-space: nowrap
 .progress.on { background: var(--rule); }
 .progress i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--accent); transition: width 0.4s; }
 
-.list { overflow-y: auto; flex: 1; padding: 6px 0 40px; }
+.split { flex: 1; min-height: 0; display: grid; grid-template-columns: minmax(340px, 38%) minmax(0, 1fr); grid-template-rows: 100%; }
+body.view-sources .split { grid-template-columns: minmax(0, 1fr); }
+body.view-sources .preview { display: none; }
+.list { overflow-y: auto; padding: 6px 0 40px; min-width: 0; }
+.preview { display: flex; flex-direction: column; min-width: 0; min-height: 0; border-left: 1px solid var(--rule); background: var(--bg); }
+.preview .pv-head { padding: 20px 28px 14px; border-bottom: 1px solid var(--rule); }
+.preview h2 { margin: 0 0 8px; font-size: 22px; line-height: 1.3; letter-spacing: -0.015em; overflow-wrap: anywhere; }
+.preview .pv-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--ink-3); margin-bottom: 12px; }
+.preview .pv-meta .src { color: var(--ink-2); }
+.preview .pv-actions { display: flex; gap: 8px; }
+.preview iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
+.preview .pv-empty { margin: auto; padding: 40px; text-align: center; color: var(--ink-3); }
+.preview .pv-empty strong { display: block; color: var(--ink-2); font-size: 16px; margin-bottom: 6px; }
+.pv-close { display: none; }
+@media (max-width: 1100px) {
+  .split { grid-template-columns: minmax(0, 1fr); }
+  .preview { position: fixed; inset: 0 0 0 auto; width: min(680px, 100%); z-index: 4; transform: translateX(100%); transition: transform 0.2s; box-shadow: -10px 0 40px rgb(0 0 0 / 0.25); }
+  body.preview-open .preview { transform: none; }
+  .pv-close { display: inline-flex; }
+}
 .entry {
   display: grid; grid-template-columns: 14px 1fr auto; gap: 4px 12px;
   padding: 11px 28px 11px 22px; border-left: 3px solid transparent; cursor: pointer;
@@ -129,10 +148,9 @@ header .sub { font: 12.5px var(--mono); color: var(--ink-3); white-space: nowrap
 .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--accent); margin-top: 8px; }
 .entry.read .dot { background: transparent; box-shadow: inset 0 0 0 1px var(--rule); }
 .entry .title {
-  font-size: 15.5px; font-weight: 560; color: var(--ink); text-decoration: none; line-height: 1.35;
+  font-size: 15.5px; font-weight: 560; color: var(--ink); line-height: 1.35;
   overflow-wrap: anywhere;
 }
-.entry .title:hover { text-decoration: underline; text-decoration-color: var(--ink-3); text-underline-offset: 3px; }
 .entry.read .title { color: var(--ink-3); font-weight: 450; }
 .entry .when { font: 12px var(--mono); color: var(--ink-3); white-space: nowrap; padding-top: 3px; }
 .entry .meta { grid-column: 2 / 4; display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: 12.5px; color: var(--ink-3); }
@@ -207,14 +225,30 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
     <button class="btn primary" id="sync">Sync <kbd>s</kbd></button>
   </header>
   <div class="progress" id="progress"><i></i></div>
-  <div class="list" id="list"></div>
+  <div class="split">
+    <div class="list" id="list"></div>
+    <section class="preview" id="preview">
+      <div class="pv-empty" id="pv-empty"><strong>Nothing selected</strong>Click an entry, or press <b>j</b>, to preview it here.</div>
+      <div class="pv-head" id="pv-head" hidden>
+        <h2 id="pv-title"></h2>
+        <div class="pv-meta" id="pv-meta"></div>
+        <div class="pv-actions">
+          <button class="btn primary" id="pv-open">Open original ↗ <kbd>o</kbd></button>
+          <button class="btn" id="pv-unread">Mark unread <kbd>r</kbd></button>
+          <button class="btn pv-close" id="pv-close">Close <kbd>Esc</kbd></button>
+        </div>
+      </div>
+      <iframe id="pv-frame" hidden sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
+    </section>
+  </div>
 </main>
 <div class="toast" id="toast"></div>
 <div class="help" id="help"><div>
   <h2>Keyboard</h2>
   <dl>
-    <dt>j / k</dt><dd>Next / previous entry</dd>
-    <dt>Enter, o</dt><dd>Open in a new tab and mark read</dd>
+    <dt>j / k</dt><dd>Next / previous entry: preview it and mark it read</dd>
+    <dt>Enter, o</dt><dd>Open the original in a new tab</dd>
+    <dt>Esc</dt><dd>Close the preview</dd>
     <dt>r</dt><dd>Toggle read</dd>
     <dt>J / K</dt><dd>Next / previous folder</dd>
     <dt>R</dt><dd>Mark the folder read</dd>
@@ -227,7 +261,7 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
 <script>
 const $ = (id) => document.getElementById(id);
 const PAGE = 150;
-const state = { folders: [], folder: null, view: "folder", entries: [], shown: [], cursor: 0, rendered: 0, filter: "", sources: [] };
+const state = { folders: [], folder: null, view: "folder", entries: [], shown: [], cursor: -1, rendered: 0, filter: "", sources: [] };
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
@@ -298,8 +332,10 @@ function updateHeader() {
   document.title = f && f.unread ? `(${f.unread}) ${f.name} · TagRss` : "TagRss";
 }
 
-async function selectFolder(name) {
+async function selectFolder(name, keepPreview = false) {
   state.view = "folder";
+  document.body.classList.remove("view-sources");
+  if (!keepPreview) clearPreview();
   state.folder = name;
   try { localStorage.setItem("tagrss.folder", name); } catch (e) { /* remembering the folder is a convenience */ }
   history.replaceState(null, "", "#" + encodeURIComponent(name));
@@ -308,7 +344,7 @@ async function selectFolder(name) {
   renderFolders();
   $("sources-btn").classList.remove("active");
   state.entries = await api("/api/entries?folder=" + encodeURIComponent(name));
-  state.cursor = 0;
+  state.cursor = -1;
   applyFilter();
 }
 
@@ -316,7 +352,7 @@ async function selectFolder(name) {
 function applyFilter() {
   const q = state.filter.trim().toLowerCase();
   state.shown = q ? state.entries.filter((e) => e.title.toLowerCase().includes(q) || e.sources.join(" ").toLowerCase().includes(q)) : state.entries;
-  state.cursor = Math.min(state.cursor, Math.max(0, state.shown.length - 1));
+  state.cursor = Math.min(state.cursor, state.shown.length - 1);
   state.rendered = 0;
   $("list").innerHTML = "";
   $("list").scrollTop = 0;
@@ -327,7 +363,7 @@ function applyFilter() {
     return;
   }
   renderMore();
-  moveCursor(state.cursor, false);
+  if (state.cursor >= 0) moveCursor(state.cursor, false);
 }
 
 function entryHtml(e, i) {
@@ -335,7 +371,7 @@ function entryHtml(e, i) {
   const len = words(e.word_count);
   return `<div class="entry ${e.read ? "read" : ""}" data-i="${i}">
     <span class="dot"></span>
-    <a class="title" href="${esc(e.url || "#")}" target="_blank" rel="noopener" data-i="${i}">${esc(e.title)}</a>
+    <span class="title">${esc(e.title)}</span>
     <span class="when" title="${esc(new Date(e.date).toLocaleString())}">${ago(e.date)}</span>
     <div class="meta"><span class="src">${esc(e.sources.join(" · "))}</span>${len ? `<span>${len}</span>` : ""}${tags.map((t) => `<span class="tag">${esc(t)}</span>`).join("")}</div>
   </div>`;
@@ -377,20 +413,79 @@ async function refreshCounts() {
   try { await loadFolders(); } catch (e) { fail(e); }
 }
 
-/* Marks read on the server; the link itself opens through the browser, so popups are never blocked. */
-async function markOpened(i) {
+async function markRead(i) {
   const e = state.shown[i];
-  if (!e) return;
+  if (!e || e.read) return;
   setRowRead(i, true);
-  try { await post(`/api/entries/${e.id}/open`); refreshCounts(); } catch (err) { fail(err); }
+  try { await post(`/api/entries/${e.id}/read`, { read: true }); refreshCounts(); } catch (err) { setRowRead(i, false); fail(err); }
 }
 
 function openEntry(i) {
   const e = state.shown[i];
-  if (!e || !e.url) return toast("This entry has no link");
+  if (!e) return;
+  if (!e.url) return toast("This entry has no link");
   window.open(e.url, "_blank", "noopener");
-  markOpened(i);
+  markRead(i);
 }
+
+/* Selecting an entry previews it and marks it read. */
+function selectEntry(i) {
+  if (!state.shown.length) return;
+  moveCursor(i);
+  showPreview(state.cursor);
+  markRead(state.cursor);
+}
+
+/* Preview */
+let previewSeq = 0;
+function clearPreview() {
+  previewSeq++;
+  document.body.classList.remove("preview-open");
+  $("pv-head").hidden = true;
+  $("pv-frame").hidden = true;
+  $("pv-frame").srcdoc = "";
+  $("pv-empty").hidden = false;
+}
+
+/* Feed HTML is untrusted: it renders in a sandboxed frame where scripts cannot run. */
+function frameDoc(html, base) {
+  const cs = getComputedStyle(document.documentElement);
+  const v = (n) => cs.getPropertyValue(n).trim();
+  return `<!DOCTYPE html><html><head><meta charset="utf-8"><base href="${esc(base || "about:blank")}" target="_blank"><style>
+    body { margin: 0; padding: 8px 28px 60px; max-width: 760px; font: 16px/1.65 -apple-system, BlinkMacSystemFont, "Inter", "PingFang TC", "Noto Sans CJK TC", sans-serif; color: ${v("--ink")}; background: ${v("--bg")}; overflow-wrap: anywhere; }
+    img, video, iframe, svg { max-width: 100%; height: auto; }
+    a { color: ${v("--accent")}; }
+    pre { overflow: auto; padding: 12px; background: ${v("--panel")}; border-radius: 8px; font-size: 13px; }
+    code { font-family: ui-monospace, Menlo, monospace; font-size: 0.9em; }
+    blockquote { margin: 1em 0; padding-left: 14px; border-left: 3px solid ${v("--rule")}; color: ${v("--ink-2")}; }
+    table { border-collapse: collapse; } td, th { border: 1px solid ${v("--rule")}; padding: 4px 8px; }
+    h1, h2, h3 { line-height: 1.3; }
+    .none { color: ${v("--ink-3")}; padding-top: 30px; }
+  </style></head><body>${html}</body></html>`;
+}
+
+async function showPreview(i) {
+  const e = state.shown[i];
+  if (!e) return;
+  const seq = ++previewSeq;
+  document.body.classList.add("preview-open");
+  $("pv-empty").hidden = true;
+  $("pv-head").hidden = false;
+  $("pv-title").textContent = e.title;
+  const len = words(e.word_count);
+  $("pv-meta").innerHTML = `<span class="src">${esc(e.sources.join(" · "))}</span><span>${esc(new Date(e.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }))}</span>${len ? `<span>${len}</span>` : ""}`;
+  $("pv-open").disabled = !e.url;
+  const frame = $("pv-frame");
+  frame.hidden = false;
+  try {
+    const { content } = await api(`/api/entries/${e.id}/content`);
+    if (seq !== previewSeq) return;
+    frame.srcdoc = frameDoc(content || `<p class="none">This feed sent no text for this entry. Open the original to read it.</p>`, e.url);
+  } catch (err) { if (seq === previewSeq) fail(err); }
+}
+$("pv-open").onclick = () => openEntry(state.cursor);
+$("pv-unread").onclick = () => toggleRead(state.cursor);
+$("pv-close").onclick = () => document.body.classList.remove("preview-open");
 
 async function toggleRead(i) {
   const e = state.shown[i];
@@ -414,18 +509,15 @@ async function markFolderRead() {
 }
 
 $("list").addEventListener("click", (ev) => {
-  const link = ev.target.closest("a.title");
   const row = ev.target.closest(".entry");
-  if (!row) return;
-  const i = Number(row.dataset.i);
-  moveCursor(i, false);
-  if (link) { markOpened(i); return; }
-  openEntry(i);
+  if (row) selectEntry(Number(row.dataset.i));
 });
 
 /* Sources */
 async function showSources() {
   state.view = "sources";
+  document.body.classList.add("view-sources");
+  clearPreview();
   history.replaceState(null, "", "#sources");
   renderFolders();
   $("sources-btn").classList.add("active");
@@ -493,7 +585,7 @@ async function pollSync() {
         else if (s.finished) toast(`Synced ${s.finished.sources} sources · ${s.finished.new_observations} new · ${s.finished.failed} failed`, 4000);
         await refreshCounts();
         updateSourcesCount();
-        if (state.view === "folder" && state.folder) await selectFolder(state.folder);
+        if (state.view === "folder" && state.folder && !document.body.classList.contains("preview-open")) await selectFolder(state.folder);
         else if (state.view === "sources") await showSources();
         break;
       }
@@ -534,8 +626,9 @@ document.addEventListener("keydown", (e) => {
     if (next) selectFolder(next.name).catch(fail);
   };
   const keys = {
-    j: () => moveCursor(state.cursor + 1), ArrowDown: () => moveCursor(state.cursor + 1),
-    k: () => moveCursor(state.cursor - 1), ArrowUp: () => moveCursor(state.cursor - 1),
+    j: () => selectEntry(state.cursor + 1), ArrowDown: () => selectEntry(state.cursor + 1),
+    k: () => selectEntry(state.cursor - 1), ArrowUp: () => selectEntry(state.cursor - 1),
+    Escape: () => document.body.classList.remove("preview-open"),
     J: () => folderStep(1), K: () => folderStep(-1),
     Enter: () => openEntry(state.cursor), o: () => openEntry(state.cursor),
     r: () => toggleRead(state.cursor),
@@ -562,7 +655,13 @@ $("help").onclick = () => $("help").classList.remove("show");
     const hash = decodeURIComponent(location.hash.slice(1));
     const first = state.folders.find((f) => f.name === hash) || state.folders.find((f) => f.name === saved) || state.folders.find((f) => f.unread) || state.folders[0];
     if (hash === "sources") { state.folder = first?.name; await showSources(); }
-    else if (first) await selectFolder(first.name);
+    else if (first) {
+      await selectFolder(first.name);
+      // ?e=<entry id> selects that entry on load.
+      const wanted = Number(new URLSearchParams(location.search).get("e"));
+      const index = wanted ? state.shown.findIndex((e) => e.observation_ids.includes(wanted)) : -1;
+      if (index >= 0) selectEntry(index);
+    }
     else $("list").innerHTML = `<div class="empty"><strong>No folders yet</strong>Add <code>[[folder]]</code> entries to your config file, then press <b>c</b>.</div>`;
     updateSourcesCount();
     const s = await api("/api/sync");

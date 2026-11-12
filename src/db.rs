@@ -8,7 +8,7 @@ use std::path::Path;
 use std::time::Duration;
 
 /// Bumped whenever the schema changes; a database with another version is dropped and recreated.
-const SCHEMA_VERSION: i32 = 2;
+const SCHEMA_VERSION: i32 = 3;
 
 pub struct Database {
     conn: Connection,
@@ -22,6 +22,8 @@ pub struct NewObservation<'a> {
     pub title: &'a str,
     pub published_at: Option<DateTime<Utc>>,
     pub word_count: Option<u32>,
+    /// HTML shown in the preview pane.
+    pub content: Option<&'a str>,
 }
 
 #[derive(Debug, Clone)]
@@ -59,6 +61,7 @@ CREATE TABLE IF NOT EXISTS observations (
     published_at  TEXT,
     first_seen_at TEXT NOT NULL,
     word_count    INTEGER,
+    content       TEXT,
     UNIQUE (source_url, item_key)
 );
 CREATE TABLE IF NOT EXISTS marks (
@@ -104,7 +107,11 @@ impl Database {
 
     fn init(conn: Connection) -> Result<Self> {
         let version: i32 = conn.pragma_query_value(None, "user_version", |r| r.get(0))?;
-        if version != SCHEMA_VERSION {
+        if version == 2 {
+            // Version 3 only adds the preview content; keep the observations and read marks.
+            conn.execute_batch("ALTER TABLE observations ADD COLUMN content TEXT")?;
+            conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+        } else if version != SCHEMA_VERSION {
             // The database is a cache: a schema change costs the same as losing it.
             let tables: Vec<String> = conn
                 .prepare("SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'")?
@@ -123,8 +130,8 @@ impl Database {
     pub fn insert_observation(&self, o: &NewObservation, now: DateTime<Utc>) -> Result<bool> {
         let inserted = self.conn.execute(
             "INSERT OR IGNORE INTO observations
-                 (source_url, item_key, url, title, published_at, first_seen_at, word_count)
-             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7)",
+                 (source_url, item_key, url, title, published_at, first_seen_at, word_count, content)
+             VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8)",
             params![
                 o.source_url,
                 o.item_key,
@@ -133,8 +140,16 @@ impl Database {
                 o.published_at.map(to_text),
                 to_text(now),
                 o.word_count,
+                o.content,
             ],
         )?;
+        if inserted == 0 && o.content.is_some() {
+            // Observations stored before content was kept get it on the next sync.
+            self.conn.execute(
+                "UPDATE observations SET content = ?1 WHERE source_url = ?2 AND item_key = ?3 AND content IS NULL",
+                params![o.content, o.source_url, o.item_key],
+            )?;
+        }
         Ok(inserted == 1)
     }
 
@@ -191,6 +206,21 @@ impl Database {
         Ok(rows.collect::<rusqlite::Result<_>>()?)
     }
 
+    /// The longest stored content among the given observations, for the preview pane.
+    pub fn content(&self, observation_ids: &[i64]) -> Result<Option<String>> {
+        let mut best: Option<String> = None;
+        let mut stmt = self.conn.prepare("SELECT content FROM observations WHERE id = ?1")?;
+        for id in observation_ids {
+            let content: Option<String> = stmt.query_row(params![id], |r| r.get(0))?;
+            if let Some(c) = content {
+                if best.as_ref().is_none_or(|b| c.len() > b.len()) {
+                    best = Some(c);
+                }
+            }
+        }
+        Ok(best)
+    }
+
     /// Writes the same mark onto every given observation, in one transaction.
     pub fn set_marks(&mut self, observation_ids: &[i64], read: bool, now: DateTime<Utc>) -> Result<()> {
         let tx = self.conn.transaction()?;
@@ -224,7 +254,23 @@ mod tests {
             title: "A",
             published_at: Some(now() - Duration::hours(1)),
             word_count: None,
+            content: None,
         }
+    }
+
+    #[test]
+    fn content_is_backfilled_once_and_the_longest_wins() {
+        let db = Database::open_in_memory().unwrap();
+        db.insert_observation(&obs("s1", "k"), now()).unwrap();
+        let mut with = obs("s1", "k");
+        with.content = Some("<p>short</p>");
+        assert!(!db.insert_observation(&with, now()).unwrap());
+        let mut other = obs("s2", "k");
+        other.content = Some("<p>the longer text</p>");
+        db.insert_observation(&other, now()).unwrap();
+        let ids: Vec<i64> = db.observations().unwrap().iter().map(|o| o.id).collect();
+        assert_eq!(db.content(&ids).unwrap().as_deref(), Some("<p>the longer text</p>"));
+        assert_eq!(db.content(&ids[..1]).unwrap().as_deref(), Some("<p>short</p>"));
     }
 
     #[test]

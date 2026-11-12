@@ -30,6 +30,8 @@ pub struct ParsedItem {
     pub title: String,
     pub published_at: Option<DateTime<Utc>>,
     pub word_count: Option<u32>,
+    /// HTML for the preview pane: the full content, else the summary.
+    pub content: Option<String>,
 }
 
 pub fn parse(bytes: &[u8]) -> Result<ParsedFeed> {
@@ -53,12 +55,14 @@ pub fn parse(bytes: &[u8]) -> Result<ParsedFeed> {
             // Only full content is counted. A summary is usually a teaser or a bare link
             // (Distill, aggregators), and counting it would tag long articles length/short.
             let text = e.content.and_then(|c| c.body).filter(|b| !b.trim().is_empty());
+            let summary = e.summary.map(|s| s.content).filter(|s| !s.trim().is_empty());
             ParsedItem {
                 item_key,
                 url,
                 title,
                 published_at: e.published.or(e.updated),
-                word_count: text.map(|t| count_words(&t)),
+                word_count: text.as_deref().map(count_words),
+                content: text.or(summary),
             }
         })
         .collect();
@@ -209,6 +213,7 @@ fn store(db: &Database, url: &str, feed: &ParsedFeed, now: DateTime<Utc>) -> Res
             title: &item.title,
             published_at: item.published_at,
             word_count: item.word_count,
+            content: item.content.as_deref(),
         };
         if db.insert_observation(&observation, now)? {
             added += 1;
