@@ -60,8 +60,14 @@ struct RawFolder {
 }
 
 pub fn load(path: &Path) -> Result<Loaded> {
-    let text = std::fs::read_to_string(path)
-        .with_context(|| format!("cannot read config file {}", path.display()))?;
+    let text = match std::fs::read_to_string(path) {
+        Ok(text) => text,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => bail!(
+            "no config file at {}; create it (see examples/tagrss.toml), run `tagrss import <opml>`, or pass --config",
+            path.display()
+        ),
+        Err(e) => return Err(e).with_context(|| format!("cannot read config file {}", path.display())),
+    };
     parse(&text).with_context(|| format!("invalid config file {}", path.display()))
 }
 

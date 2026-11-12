@@ -72,12 +72,25 @@ pub fn slug(title: &str) -> String {
     }
 }
 
+/// When an entry was published, as far as TagRss can tell; None if it cannot.
+///
+/// A feed's publish date is used when there is one. Without it, the time the entry was first seen
+/// stands in, but only if the source was already being followed: an undated entry that arrives in
+/// its source's first fetch is backlog of unknown age, not something published just now.
+pub fn published(
+    published_at: Option<DateTime<Utc>>,
+    first_seen_at: DateTime<Utc>,
+    source_first_seen_at: DateTime<Utc>,
+) -> Option<DateTime<Utc>> {
+    published_at.or_else(|| (first_seen_at > source_first_seen_at).then_some(first_seen_at))
+}
+
 /// The facts about one entry that its tags are computed from.
 pub struct Facts<'a> {
     pub source_tags: &'a [String],
     pub source_title: &'a str,
-    pub published_at: Option<DateTime<Utc>>,
-    pub first_seen_at: DateTime<Utc>,
+    /// See [`published`]; an entry of unknown age gets no age tags.
+    pub published: Option<DateTime<Utc>>,
     pub word_count: Option<u32>,
     pub read: bool,
 }
@@ -87,17 +100,18 @@ pub fn compute(facts: &Facts, now: DateTime<Utc>) -> HashSet<String> {
     let mut tags: HashSet<String> = facts.source_tags.iter().cloned().collect();
     tags.insert(format!("source/{}", slug(facts.source_title)));
 
-    // A publish date in the future (clock skew, time zones) counts as just published.
-    let when = facts.published_at.unwrap_or(facts.first_seen_at);
-    let age = (now - when).max(Duration::zero());
-    if age < Duration::days(1) {
-        tags.insert("age/today".into());
-    }
-    if age < Duration::days(7) {
-        tags.insert("age/week".into());
-    }
-    if age < Duration::days(30) {
-        tags.insert("age/month".into());
+    if let Some(published) = facts.published {
+        // A publish date in the future (clock skew, time zones) counts as just published.
+        let age = (now - published).max(Duration::zero());
+        if age < Duration::days(1) {
+            tags.insert("age/today".into());
+        }
+        if age < Duration::days(7) {
+            tags.insert("age/week".into());
+        }
+        if age < Duration::days(30) {
+            tags.insert("age/month".into());
+        }
     }
 
     let length = match facts.word_count {
@@ -112,16 +126,13 @@ pub fn compute(facts: &Facts, now: DateTime<Utc>) -> HashSet<String> {
     tags
 }
 
-/// Whether an entry counts as read: an explicit mark wins, otherwise anything from before a rebuild is read.
-pub fn is_read(
-    mark: Option<bool>,
-    published_at: Option<DateTime<Utc>>,
-    first_seen_at: DateTime<Utc>,
-    rebuilt_at: Option<DateTime<Utc>>,
-) -> bool {
-    match mark {
-        Some(read) => read,
-        None => rebuilt_at.is_some_and(|r| published_at.unwrap_or(first_seen_at) < r),
+/// Whether an entry counts as read: an explicit mark wins, otherwise anything from before a rebuild
+/// is read, and so is backlog of unknown age. `published` is the result of [`published`].
+pub fn is_read(mark: Option<bool>, published: Option<DateTime<Utc>>, rebuilt_at: Option<DateTime<Utc>>) -> bool {
+    match (mark, published) {
+        (Some(read), _) => read,
+        (None, Some(published)) => rebuilt_at.is_some_and(|r| published < r),
+        (None, None) => true,
     }
 }
 
@@ -169,8 +180,7 @@ mod tests {
         Facts {
             source_tags: &[],
             source_title: "Feed",
-            published_at: published_hours_ago.map(|h| now - Duration::hours(h)),
-            first_seen_at: now - Duration::hours(2),
+            published: published_hours_ago.map(|h| now - Duration::hours(h)),
             word_count: words,
             read,
         }
@@ -187,8 +197,22 @@ mod tests {
         assert!(!old.iter().any(|t| t.starts_with("age/")));
         let future = compute(&facts(Some(-48), None, false, now), now);
         assert!(future.contains("age/today"));
-        // No publish date: first_seen_at (2 hours ago) is used.
-        assert!(compute(&facts(None, None, false, now), now).contains("age/today"));
+        // Unknown age: no age tags at all.
+        assert!(!compute(&facts(None, None, false, now), now).iter().any(|t| t.starts_with("age/")));
+    }
+
+    #[test]
+    fn undated_entries_use_first_seen_unless_they_are_backlog() {
+        let first_fetch = Utc.with_ymd_and_hms(2026, 10, 1, 12, 0, 0).unwrap();
+        let later = first_fetch + Duration::days(3);
+        let date = Some(first_fetch - Duration::days(100));
+        // A feed's own date always wins.
+        assert_eq!(published(date, first_fetch, first_fetch), date);
+        assert_eq!(published(date, later, first_fetch), date);
+        // Undated, in the source's first fetch: backlog, age unknown.
+        assert_eq!(published(None, first_fetch, first_fetch), None);
+        // Undated, seen on a later fetch: it appeared between two fetches.
+        assert_eq!(published(None, later, first_fetch), Some(later));
     }
 
     #[test]
@@ -211,8 +235,7 @@ mod tests {
         let f = Facts {
             source_tags: &source_tags,
             source_title: "Distill",
-            published_at: None,
-            first_seen_at: now,
+            published: None,
             word_count: None,
             read: false,
         };
@@ -225,11 +248,13 @@ mod tests {
         let rebuilt = Utc.with_ymd_and_hms(2026, 10, 1, 0, 0, 0).unwrap();
         let before = Some(rebuilt - Duration::days(1));
         let after = Some(rebuilt + Duration::days(1));
-        let seen = rebuilt;
-        assert!(is_read(None, before, seen, Some(rebuilt)));
-        assert!(!is_read(None, after, seen, Some(rebuilt)));
-        assert!(!is_read(Some(false), before, seen, Some(rebuilt)));
-        assert!(is_read(Some(true), after, seen, Some(rebuilt)));
-        assert!(!is_read(None, before, seen, None));
+        assert!(is_read(None, before, Some(rebuilt)));
+        assert!(!is_read(None, after, Some(rebuilt)));
+        assert!(!is_read(Some(false), before, Some(rebuilt)));
+        assert!(is_read(Some(true), after, Some(rebuilt)));
+        assert!(!is_read(None, before, None));
+        // Backlog of unknown age is read until marked otherwise.
+        assert!(is_read(None, None, Some(rebuilt)));
+        assert!(!is_read(Some(false), None, Some(rebuilt)));
     }
 }

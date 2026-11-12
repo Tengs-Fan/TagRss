@@ -1,15 +1,20 @@
 //! Fetching and parsing feeds, and syncing their entries into the database.
 
-use anyhow::Result;
+use anyhow::{bail, Result};
 use chrono::{DateTime, Utc};
 use futures::stream::{self, StreamExt};
+use reqwest::header::{HeaderName, ETAG, IF_MODIFIED_SINCE, IF_NONE_MATCH, LAST_MODIFIED};
+use reqwest::StatusCode;
 use std::time::Duration;
 
 use crate::config::Config;
-use crate::db::{Database, NewEntry};
+use crate::db::{Database, NewEntry, Validators};
 
-const CONCURRENT_FETCHES: usize = 8;
+const CONCURRENT_FETCHES: usize = 16;
+const CONNECT_TIMEOUT: Duration = Duration::from_secs(10);
 const FETCH_TIMEOUT: Duration = Duration::from_secs(30);
+/// How much of an entry's text stands in for a missing title.
+const EXCERPT_CHARS: usize = 80;
 
 /// What a feed said, reduced to the metadata TagRss keeps.
 #[derive(Debug)]
@@ -28,26 +33,34 @@ pub struct ParsedEntry {
 }
 
 pub fn parse(bytes: &[u8]) -> Result<ParsedFeed> {
-    let feed = feed_rs::parser::parse(bytes)?;
+    let feed = match feed_rs::parser::parse(bytes) {
+        Ok(feed) => feed,
+        // The usual reason: the feed is gone and the address now serves the site, a login page, or a parking page.
+        Err(_) if looks_like_html(bytes) => bail!("not a feed: the address returns a web page"),
+        Err(e) => return Err(e.into()),
+    };
     let title = feed.title.map(|t| clean(&t.content)).filter(|t| !t.is_empty());
     let entries = feed
         .entries
         .into_iter()
         .map(|e| {
             let url = e.links.first().map(|l| l.href.clone()).filter(|u| !u.is_empty());
+            // Only full content is counted. A summary is usually a teaser or a bare link
+            // (Distill, aggregators), and counting it would tag long articles length/short.
+            let text = e.content.and_then(|c| c.body).filter(|b| !b.trim().is_empty());
+            let summary = e.summary.map(|s| s.content);
+            // Microblog posts have no title; the start of their text is shown instead.
             let title = e
                 .title
                 .map(|t| clean(&t.content))
                 .filter(|t| !t.is_empty())
+                .or_else(|| text.as_deref().or(summary.as_deref()).and_then(excerpt))
                 .unwrap_or_else(|| "Untitled".to_string());
             // feed-rs generates an id when the feed gives none; the link and title are a last resort.
             let key = Some(e.id)
                 .filter(|id| !id.is_empty())
                 .or_else(|| url.clone())
                 .unwrap_or_else(|| title.clone());
-            // Only full content is counted. A summary is usually a teaser or a bare link
-            // (Distill, aggregators), and counting it would tag long articles length/short.
-            let text = e.content.and_then(|c| c.body).filter(|b| !b.trim().is_empty());
             ParsedEntry {
                 key,
                 url,
@@ -63,6 +76,37 @@ pub fn parse(bytes: &[u8]) -> Result<ParsedFeed> {
 /// Decodes HTML entities (some feeds escape titles twice, leaving `&rsquo;` behind) and collapses whitespace.
 fn clean(s: &str) -> String {
     html_escape::decode_html_entities(s).split_whitespace().collect::<Vec<_>>().join(" ")
+}
+
+/// The first characters of an entry's text, without markup; None if there is no text.
+fn excerpt(html: &str) -> Option<String> {
+    let mut text = String::new();
+    let mut in_tag = false;
+    for c in html.chars() {
+        match c {
+            '<' => {
+                in_tag = true;
+                text.push(' ');
+            }
+            '>' if in_tag => in_tag = false,
+            _ if !in_tag => text.push(c),
+            _ => {}
+        }
+    }
+    let text = clean(&text);
+    if text.is_empty() {
+        return None;
+    }
+    Some(match text.char_indices().nth(EXCERPT_CHARS) {
+        Some((cut, _)) => format!("{}…", text[..cut].trim_end()),
+        None => text,
+    })
+}
+
+fn looks_like_html(bytes: &[u8]) -> bool {
+    let head = String::from_utf8_lossy(&bytes[..bytes.len().min(512)]).to_lowercase();
+    let head = head.trim_start_matches(|c: char| c.is_whitespace() || c == '\u{feff}');
+    head.starts_with("<!doctype html") || head.starts_with("<html")
 }
 
 /// Counts words in text or HTML. Han, Hiragana, and Katakana characters count one word each.
@@ -108,63 +152,117 @@ fn is_cjk(c: char) -> bool {
 
 pub fn client() -> Result<reqwest::Client> {
     Ok(reqwest::Client::builder()
+        .connect_timeout(CONNECT_TIMEOUT)
         .timeout(FETCH_TIMEOUT)
         .user_agent(concat!("tagrss/", env!("CARGO_PKG_VERSION")))
         .build()?)
 }
 
-pub async fn fetch(client: &reqwest::Client, url: &str) -> Result<ParsedFeed> {
-    let bytes = client.get(url).send().await?.error_for_status()?.bytes().await?;
-    parse(&bytes)
+/// What a server answered when asked for a feed.
+#[derive(Debug)]
+pub enum Fetched {
+    /// The feed has not changed since the response the validators came from.
+    NotModified,
+    Feed { feed: ParsedFeed, validators: Validators },
+}
+
+/// Fetches a feed. `validators` are those of the last successful fetch, so an unchanged feed is not sent again.
+pub async fn fetch(client: &reqwest::Client, url: &str, validators: &Validators) -> Result<Fetched> {
+    let mut request = client.get(url);
+    if let Some(etag) = &validators.etag {
+        request = request.header(IF_NONE_MATCH, etag);
+    }
+    if let Some(last_modified) = &validators.last_modified {
+        request = request.header(IF_MODIFIED_SINCE, last_modified);
+    }
+    // Errors are shown next to the source they belong to, so the URL inside them is noise.
+    let response = request.send().await.map_err(reqwest::Error::without_url)?;
+    if response.status() == StatusCode::NOT_MODIFIED {
+        return Ok(Fetched::NotModified);
+    }
+    let response = response.error_for_status().map_err(reqwest::Error::without_url)?;
+    let header = |name: HeaderName| response.headers().get(name).and_then(|v| v.to_str().ok()).map(str::to_string);
+    let validators = Validators { etag: header(ETAG), last_modified: header(LAST_MODIFIED) };
+    let bytes = response.bytes().await.map_err(reqwest::Error::without_url)?;
+    Ok(Fetched::Feed { feed: parse(&bytes)?, validators })
+}
+
+#[derive(Debug, PartialEq)]
+pub enum Outcome {
+    /// The feed was fetched; this many of its entries were new.
+    New(usize),
+    /// The server said the feed has not changed since the last fetch.
+    Unchanged,
+    Failed(String),
 }
 
 /// The outcome of syncing one source.
 pub struct SyncResult {
     pub url: String,
-    pub outcome: Result<usize>,
+    pub outcome: Outcome,
 }
 
 /// Fetches every configured source and stores new entries; one failing feed never stops the rest.
-pub async fn sync(config: &Config, db: &Database, now: DateTime<Utc>) -> Result<Vec<SyncResult>> {
+/// `progress` is called with (sources done, sources in total) as each one finishes.
+/// Results are in the order of the config file.
+pub async fn sync(
+    config: &Config,
+    db: &Database,
+    now: DateTime<Utc>,
+    mut progress: impl FnMut(usize, usize),
+) -> Result<Vec<SyncResult>> {
     let client = client()?;
-    let mut fetches = stream::iter(&config.sources)
-        .map(|source| {
+    let known = db.fetches()?;
+    let mut fetches = stream::iter(config.sources.iter().enumerate())
+        .map(|(index, source)| {
             let client = &client;
-            async move { (source.url.clone(), fetch(client, &source.url).await) }
+            let validators = known.get(&source.url).map(|f| f.validators.clone()).unwrap_or_default();
+            async move { (index, source.url.as_str(), fetch(client, &source.url, &validators).await) }
         })
         .buffer_unordered(CONCURRENT_FETCHES);
 
     let mut results = Vec::new();
-    while let Some((url, fetched)) = fetches.next().await {
+    while let Some((index, url, fetched)) = fetches.next().await {
         let outcome = match fetched {
-            Ok(feed) => store(db, &url, &feed, now),
+            Ok(Fetched::Feed { feed, validators }) => Outcome::New(store(db, url, &feed, &validators, now)?),
+            Ok(Fetched::NotModified) => {
+                db.record_fetch_unchanged(url, now)?;
+                Outcome::Unchanged
+            }
             Err(e) => {
-                db.record_fetch(&url, None, now, Some(&format!("{e:#}")))?;
-                Err(e)
+                let error = format!("{e:#}");
+                db.record_fetch_error(url, &error, now)?;
+                Outcome::Failed(error)
             }
         };
-        results.push(SyncResult { url, outcome });
+        results.push((index, SyncResult { url: url.to_string(), outcome }));
+        progress(results.len(), config.sources.len());
     }
-    Ok(results)
+    results.sort_by_key(|(index, _)| *index);
+    Ok(results.into_iter().map(|(_, result)| result).collect())
 }
 
-fn store(db: &Database, url: &str, feed: &ParsedFeed, now: DateTime<Utc>) -> Result<usize> {
-    let mut added = 0;
-    for e in &feed.entries {
-        let entry = NewEntry {
-            source_url: url,
-            entry_key: &e.key,
-            url: e.url.as_deref(),
-            title: &e.title,
-            published_at: e.published_at,
-            word_count: e.word_count,
-        };
-        if db.insert_entry(&entry, now)? {
-            added += 1;
+/// Stores a fetched feed's new entries and its validators together, so a feed is never
+/// remembered as "seen up to here" without its entries.
+fn store(db: &Database, url: &str, feed: &ParsedFeed, validators: &Validators, now: DateTime<Utc>) -> Result<usize> {
+    db.transaction(|| {
+        let mut added = 0;
+        for e in &feed.entries {
+            let entry = NewEntry {
+                source_url: url,
+                entry_key: &e.key,
+                url: e.url.as_deref(),
+                title: &e.title,
+                published_at: e.published_at,
+                word_count: e.word_count,
+            };
+            if db.insert_entry(&entry, now)? {
+                added += 1;
+            }
         }
-    }
-    db.record_fetch(url, feed.title.as_deref(), now, None)?;
-    Ok(added)
+        db.record_fetch_ok(url, feed.title.as_deref(), validators, now)?;
+        Ok(added)
+    })
 }
 
 #[cfg(test)]
@@ -248,6 +346,34 @@ mod tests {
         assert_eq!(e.key, "yt:video:abc123");
         assert_eq!(e.word_count, None);
         assert_eq!(e.published_at.unwrap().to_rfc3339(), "2026-10-05T10:00:00+00:00");
+    }
+
+    #[test]
+    fn entries_without_a_title_show_the_start_of_their_text() {
+        let long = "word ".repeat(40);
+        let atom = format!(
+            r#"<?xml version="1.0"?>
+<feed xmlns="http://www.w3.org/2005/Atom"><title>T</title>
+  <entry><id>1</id><content type="html">&lt;p&gt;Just a &lt;b&gt;short&lt;/b&gt; note&lt;/p&gt;&lt;p&gt;Fish &amp;amp; chips.&lt;/p&gt;</content></entry>
+  <entry><id>2</id><summary>{long}</summary></entry>
+  <entry><id>3</id><content type="html">&lt;img src="a.png"/&gt;</content></entry>
+  <entry><id>4</id><title>Has a title</title><summary>ignored</summary></entry>
+</feed>"#
+        );
+        let entries = parse(atom.as_bytes()).unwrap().entries;
+        assert_eq!(entries[0].title, "Just a short note Fish & chips.");
+        assert_eq!(entries[1].title, format!("{}…", "word ".repeat(16).trim_end()));
+        assert_eq!(entries[1].title.chars().count(), 80);
+        assert_eq!(entries[2].title, "Untitled");
+        assert_eq!(entries[3].title, "Has a title");
+    }
+
+    #[test]
+    fn a_web_page_is_reported_as_not_a_feed() {
+        let page = "\u{feff}\n  <!DOCTYPE html><html><head><title>Moved</title></head><body></body></html>";
+        assert_eq!(parse(page.as_bytes()).unwrap_err().to_string(), "not a feed: the address returns a web page");
+        // Anything else keeps the parser's own message.
+        assert!(!parse(b"plain text").unwrap_err().to_string().contains("web page"));
     }
 
     #[test]

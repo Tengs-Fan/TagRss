@@ -38,6 +38,15 @@ pub struct Fetch {
     pub feed_title: Option<String>,
     pub fetched_at: DateTime<Utc>,
     pub error: Option<String>,
+    /// The validators of the last successful response, sent back to ask "has it changed?".
+    pub validators: Validators,
+}
+
+/// HTTP cache validators: the `ETag` and `Last-Modified` headers of a response.
+#[derive(Debug, Clone, Default, PartialEq)]
+pub struct Validators {
+    pub etag: Option<String>,
+    pub last_modified: Option<String>,
 }
 
 const SCHEMA: &str = r#"
@@ -61,13 +70,18 @@ CREATE TABLE IF NOT EXISTS fetches (
     source_url TEXT PRIMARY KEY,
     feed_title TEXT,
     fetched_at TEXT NOT NULL,
-    error      TEXT
+    error      TEXT,
+    etag          TEXT,
+    last_modified TEXT
 );
 CREATE TABLE IF NOT EXISTS meta (
     key   TEXT PRIMARY KEY,
     value TEXT NOT NULL
 );
 "#;
+
+/// Bumped whenever the schema changes; `migrate` brings older files up to date.
+const SCHEMA_VERSION: i64 = 1;
 
 fn to_text(t: DateTime<Utc>) -> String {
     t.to_rfc3339()
@@ -98,6 +112,7 @@ impl Database {
 
     fn init(conn: Connection, rebuilt_at: Option<DateTime<Utc>>) -> Result<Self> {
         conn.execute_batch(SCHEMA)?;
+        Self::migrate(&conn)?;
         if let Some(t) = rebuilt_at {
             conn.execute(
                 "INSERT OR REPLACE INTO meta (key, value) VALUES ('rebuilt_at', ?1)",
@@ -105,6 +120,31 @@ impl Database {
             )?;
         }
         Ok(Self { conn })
+    }
+
+    /// Upgrades a database written by an older version. The file is a cache, so a migration only ever adds to it.
+    fn migrate(conn: &Connection) -> Result<()> {
+        let version: i64 = conn.query_row("PRAGMA user_version", [], |r| r.get(0))?;
+        if version > SCHEMA_VERSION {
+            anyhow::bail!("the database was written by a newer version of TagRss (schema {version}, this version knows {SCHEMA_VERSION})");
+        }
+        if version < 1 {
+            // Version 0 had no validators; a newly created file already has them from SCHEMA.
+            let has_etag = conn.prepare("SELECT 1 FROM pragma_table_info('fetches') WHERE name = 'etag'")?.exists([])?;
+            if !has_etag {
+                conn.execute_batch("ALTER TABLE fetches ADD COLUMN etag TEXT; ALTER TABLE fetches ADD COLUMN last_modified TEXT;")?;
+            }
+        }
+        conn.pragma_update(None, "user_version", SCHEMA_VERSION)?;
+        Ok(())
+    }
+
+    /// Runs `f` in one transaction: all of its writes are committed together, or none if it fails.
+    pub fn transaction<T>(&self, f: impl FnOnce() -> Result<T>) -> Result<T> {
+        let tx = self.conn.unchecked_transaction()?;
+        let value = f()?;
+        tx.commit()?;
+        Ok(value)
     }
 
     pub fn rebuilt_at(&self) -> Result<Option<DateTime<Utc>>> {
@@ -134,21 +174,43 @@ impl Database {
         Ok(inserted == 1)
     }
 
-    pub fn record_fetch(&self, source_url: &str, feed_title: Option<&str>, now: DateTime<Utc>, error: Option<&str>) -> Result<()> {
-        // A failed fetch keeps the title from the last successful one.
+    /// Records a successful fetch. A feed without a title keeps the title of an earlier fetch.
+    pub fn record_fetch_ok(&self, source_url: &str, feed_title: Option<&str>, validators: &Validators, now: DateTime<Utc>) -> Result<()> {
         self.conn.execute(
-            "INSERT INTO fetches (source_url, feed_title, fetched_at, error) VALUES (?1, ?2, ?3, ?4)
+            "INSERT INTO fetches (source_url, feed_title, fetched_at, error, etag, last_modified)
+             VALUES (?1, ?2, ?3, NULL, ?4, ?5)
              ON CONFLICT (source_url) DO UPDATE SET
                  feed_title = COALESCE(excluded.feed_title, feed_title),
                  fetched_at = excluded.fetched_at,
-                 error = excluded.error",
-            params![source_url, feed_title, to_text(now), error],
+                 error = NULL,
+                 etag = excluded.etag,
+                 last_modified = excluded.last_modified",
+            params![source_url, feed_title, to_text(now), validators.etag, validators.last_modified],
+        )?;
+        Ok(())
+    }
+
+    /// Records that the server said the feed has not changed since the last successful fetch.
+    pub fn record_fetch_unchanged(&self, source_url: &str, now: DateTime<Utc>) -> Result<()> {
+        self.conn.execute(
+            "UPDATE fetches SET fetched_at = ?2, error = NULL WHERE source_url = ?1",
+            params![source_url, to_text(now)],
+        )?;
+        Ok(())
+    }
+
+    /// Records a failed fetch. The title and validators of the last successful one are kept.
+    pub fn record_fetch_error(&self, source_url: &str, error: &str, now: DateTime<Utc>) -> Result<()> {
+        self.conn.execute(
+            "INSERT INTO fetches (source_url, fetched_at, error) VALUES (?1, ?2, ?3)
+             ON CONFLICT (source_url) DO UPDATE SET fetched_at = excluded.fetched_at, error = excluded.error",
+            params![source_url, to_text(now), error],
         )?;
         Ok(())
     }
 
     pub fn fetches(&self) -> Result<HashMap<String, Fetch>> {
-        let mut stmt = self.conn.prepare("SELECT source_url, feed_title, fetched_at, error FROM fetches")?;
+        let mut stmt = self.conn.prepare("SELECT source_url, feed_title, fetched_at, error, etag, last_modified FROM fetches")?;
         let rows = stmt.query_map([], |r| {
             Ok((
                 r.get::<_, String>(0)?,
@@ -156,6 +218,7 @@ impl Database {
                     feed_title: r.get(1)?,
                     fetched_at: from_text(&r.get::<_, String>(2)?)?,
                     error: r.get(3)?,
+                    validators: Validators { etag: r.get(4)?, last_modified: r.get(5)? },
                 },
             ))
         })?;
@@ -248,13 +311,64 @@ mod tests {
     }
 
     #[test]
-    fn failed_fetch_keeps_the_last_title() {
+    fn failed_and_unchanged_fetches_keep_the_last_title_and_validators() {
         let db = Database::open_in_memory(None).unwrap();
-        db.record_fetch("s", Some("Title"), now(), None).unwrap();
-        db.record_fetch("s", None, now(), Some("timeout")).unwrap();
+        let validators = Validators { etag: Some("\"v1\"".into()), last_modified: None };
+        db.record_fetch_ok("s", Some("Title"), &validators, now()).unwrap();
+        db.record_fetch_error("s", "timeout", now()).unwrap();
         let f = &db.fetches().unwrap()["s"];
         assert_eq!(f.feed_title.as_deref(), Some("Title"));
         assert_eq!(f.error.as_deref(), Some("timeout"));
+        assert_eq!(f.validators, validators);
+
+        db.record_fetch_unchanged("s", now() + Duration::hours(1)).unwrap();
+        let f = &db.fetches().unwrap()["s"];
+        assert_eq!(f.error, None);
+        assert_eq!(f.fetched_at, now() + Duration::hours(1));
+        assert_eq!(f.validators, validators);
+
+        // A later success without validators clears the old ones, so they are never sent stale.
+        db.record_fetch_ok("s", None, &Validators::default(), now()).unwrap();
+        let f = &db.fetches().unwrap()["s"];
+        assert_eq!(f.feed_title.as_deref(), Some("Title"));
+        assert_eq!(f.validators, Validators::default());
+    }
+
+    #[test]
+    fn a_failed_transaction_writes_nothing() {
+        let db = Database::open_in_memory(None).unwrap();
+        let failed: Result<()> = db.transaction(|| {
+            db.insert_entry(&entry("s", "k"), now())?;
+            anyhow::bail!("stop")
+        });
+        assert!(failed.is_err());
+        assert!(db.entries().unwrap().is_empty());
+        db.transaction(|| db.insert_entry(&entry("s", "k"), now())).unwrap();
+        assert_eq!(db.entries().unwrap().len(), 1);
+    }
+
+    #[test]
+    fn a_version_0_database_is_migrated() {
+        let dir = tempfile::tempdir().unwrap();
+        let path = dir.path().join("tagrss.db");
+        // The fetches table as the first release created it, with one row.
+        let old = Connection::open(&path).unwrap();
+        old.execute_batch(
+            "CREATE TABLE fetches (source_url TEXT PRIMARY KEY, feed_title TEXT, fetched_at TEXT NOT NULL, error TEXT);
+             INSERT INTO fetches VALUES ('s', 'Title', '2026-10-01T12:00:00+00:00', NULL);",
+        )
+        .unwrap();
+        drop(old);
+
+        let db = Database::open(&path, now()).unwrap();
+        let f = &db.fetches().unwrap()["s"];
+        assert_eq!(f.feed_title.as_deref(), Some("Title"));
+        assert_eq!(f.validators, Validators::default());
+        db.record_fetch_ok("s", None, &Validators { etag: Some("e".into()), last_modified: None }, now()).unwrap();
+        // An existing file is not a new install: rebuilt_at is not set by opening it.
+        assert_eq!(db.rebuilt_at().unwrap(), None);
+        drop(db);
+        Database::open(&path, now()).unwrap();
     }
 
     #[test]

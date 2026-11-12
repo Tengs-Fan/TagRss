@@ -29,20 +29,31 @@ pub fn items(config: &Config, db: &Database, now: DateTime<Utc>) -> Result<Vec<I
     let fetches = db.fetches()?;
     let rebuilt_at = db.rebuilt_at()?;
     let no_tags: Vec<String> = Vec::new();
+    let entries = db.entries()?;
 
-    let mut items: Vec<Item> = db
-        .entries()?
+    // When each source first delivered anything; see `tags::published`.
+    let mut first_seen: HashMap<&str, DateTime<Utc>> = HashMap::new();
+    for e in &entries {
+        let first = first_seen.entry(e.source_url.as_str()).or_insert(e.first_seen_at);
+        *first = (*first).min(e.first_seen_at);
+    }
+    let published: Vec<Option<DateTime<Utc>>> = entries
+        .iter()
+        .map(|e| tags::published(e.published_at, e.first_seen_at, first_seen[e.source_url.as_str()]))
+        .collect();
+
+    let mut items: Vec<Item> = entries
         .into_iter()
-        .map(|entry| {
+        .zip(published)
+        .map(|(entry, published)| {
             // A source removed from the config keeps its entries, with system tags only.
             let source = sources.get(entry.source_url.as_str()).copied();
             let title = source_title(&entry.source_url, source, fetches.get(&entry.source_url));
-            let read = tags::is_read(entry.mark, entry.published_at, entry.first_seen_at, rebuilt_at);
+            let read = tags::is_read(entry.mark, published, rebuilt_at);
             let facts = Facts {
                 source_tags: source.map_or(&no_tags, |s| &s.tags),
                 source_title: &title,
-                published_at: entry.published_at,
-                first_seen_at: entry.first_seen_at,
+                published,
                 word_count: entry.word_count,
                 read,
             };
@@ -52,6 +63,44 @@ pub fn items(config: &Config, db: &Database, now: DateTime<Utc>) -> Result<Vec<I
         .collect();
     items.sort_by_key(|i| std::cmp::Reverse(i.entry.published_at.unwrap_or(i.entry.first_seen_at)));
     Ok(items)
+}
+
+/// One configured source with what the database knows about it.
+pub struct SourceStatus<'a> {
+    pub source: &'a Source,
+    pub title: String,
+    pub entries: usize,
+    /// The date of the newest stored entry.
+    pub newest: Option<DateTime<Utc>>,
+    /// The last sync; None if the source has never been synced.
+    pub fetch: Option<Fetch>,
+}
+
+/// Every source in the config file, in file order.
+pub fn sources<'a>(config: &'a Config, db: &Database) -> Result<Vec<SourceStatus<'a>>> {
+    let mut fetches = db.fetches()?;
+    let mut stats: HashMap<String, (usize, DateTime<Utc>)> = HashMap::new();
+    for e in db.entries()? {
+        let date = e.published_at.unwrap_or(e.first_seen_at);
+        let (count, newest) = stats.entry(e.source_url).or_insert((0, date));
+        *count += 1;
+        *newest = (*newest).max(date);
+    }
+    Ok(config
+        .sources
+        .iter()
+        .map(|source| {
+            let fetch = fetches.remove(&source.url);
+            let stat = stats.get(&source.url);
+            SourceStatus {
+                source,
+                title: source_title(&source.url, Some(source), fetch.as_ref()),
+                entries: stat.map_or(0, |s| s.0),
+                newest: stat.map(|s| s.1),
+                fetch,
+            }
+        })
+        .collect())
 }
 
 pub fn in_folder<'a>(items: &'a [Item], folder: &'a Folder) -> impl Iterator<Item = &'a Item> {
@@ -108,6 +157,8 @@ mod tests {
         add("https://ai.example/feed", "ai-old", 9); // before rebuilt_at: counts as read
         add("https://misc.example/feed", "misc", 1);
         add("https://gone.example/feed", "gone", 1); // source no longer in the config
+        db.record_fetch_ok("https://misc.example/feed", Some("Misc Feed"), &Default::default(), now).unwrap();
+        db.record_fetch_error("https://misc.example/feed", "timeout", now).unwrap();
 
         let items = items(&cfg, &db, now).unwrap();
         let names = |folder: &Folder| in_folder(&items, folder).map(|i| i.entry.title.clone()).collect::<Vec<_>>();
@@ -128,5 +179,39 @@ mod tests {
         let mut ai = in_folder(&items_after, &cfg.folders[0]).map(|i| i.entry.title.clone()).collect::<Vec<_>>();
         ai.sort();
         assert_eq!(ai, vec!["ai-new", "ai-old"]);
+
+        let status = sources(&cfg, &db).unwrap();
+        assert_eq!(status.len(), 2); // only what the config lists; "gone" is not a source any more
+        assert_eq!((status[0].title.as_str(), status[0].entries), ("AI Blog", 2));
+        assert_eq!(status[0].newest, Some(now - Duration::days(1)));
+        assert!(status[0].fetch.is_none());
+        assert_eq!((status[1].title.as_str(), status[1].entries), ("Misc Feed", 1));
+        assert_eq!(status[1].fetch.as_ref().unwrap().error.as_deref(), Some("timeout"));
+    }
+
+    #[test]
+    fn undated_backlog_is_read_and_has_no_age() {
+        let installed = Utc.with_ymd_and_hms(2026, 10, 1, 12, 0, 0).unwrap();
+        let cfg = config::parse("[[source]]\nurl = \"s\"\n").unwrap().config;
+        let db = Database::open_in_memory(Some(installed)).unwrap();
+        let add = |key: &str, seen: DateTime<Utc>| {
+            let entry = NewEntry { source_url: "s", entry_key: key, url: None, title: key, published_at: None, word_count: None };
+            db.insert_entry(&entry, seen).unwrap();
+        };
+        // The first sync brings the feed's undated backlog; a later sync brings one more entry.
+        let first_sync = installed + Duration::minutes(5);
+        let second_sync = installed + Duration::days(2);
+        add("backlog-1", first_sync);
+        add("backlog-2", first_sync);
+        add("fresh", second_sync);
+
+        let items = items(&cfg, &db, second_sync + Duration::hours(1)).unwrap();
+        let get = |title: &str| items.iter().find(|i| i.entry.title == title).unwrap();
+        for backlog in ["backlog-1", "backlog-2"] {
+            assert!(get(backlog).read, "{backlog} should count as read");
+            assert!(!get(backlog).tags.iter().any(|t| t.starts_with("age/")), "{backlog} has no known age");
+        }
+        assert!(!get("fresh").read);
+        assert!(get("fresh").tags.contains("age/today"));
     }
 }

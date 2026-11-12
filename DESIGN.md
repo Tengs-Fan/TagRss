@@ -8,7 +8,7 @@ Everything else is an internal detail and must not leak into that contract.
 The user gives the system **one file** containing the sources (with tags) and the folders (with rules over tags).
 That file is the user's whole setup: keep it in git, copy it to a new machine, and the reader is fully restored.
 
-The system shows back **folders**, each a list of entries (title, source, date, link), and accepts one action: **mark read** / **mark unread**.
+The system shows back **folders**, each a list of entries (title, source, date, link), and accepts one action: **mark read** / **mark unread**, for single entries or for everything in a folder.
 Articles are read in the browser; TagRss links out and does not render content.
 
 ## The config file
@@ -73,7 +73,11 @@ User tags must not start with `source/`, `age/`, `length/`, or `state/`; the fil
 | `state/unread` | Not marked read |
 
 Age tags overlap on purpose: an entry from today also has `age/week` and `age/month`, so the rule `age/week` means "within the last week".
-An entry without a publish date uses the time TagRss first saw it.
+
+An entry without a publish date uses the time TagRss first saw it, which is right when the source was already being followed: the entry appeared between two syncs.
+It is wrong for the undated entries that arrive in a source's **first** sync, which are backlog of unknown age and were not published at the moment of subscribing.
+Those get no age tag at all and are treated as read, like the rest of the backlog (see "Losing the database").
+In practice this is a handful of feeds (4 of 334 in the author's list), but without the rule each of them shows its whole backlog as unread and from today after a fresh install.
 
 The thresholds above are fixed defaults for v1.
 Making them configurable would mean a third section in the file, and is deferred until a real need appears.
@@ -110,7 +114,7 @@ entries (
   source_url     TEXT NOT NULL,        -- the source's identity, from the config file
   entry_key      TEXT NOT NULL,        -- feed entry id, falling back to the link
   url            TEXT,                 -- link to open in the browser
-  title          TEXT NOT NULL,
+  title          TEXT NOT NULL,        -- the feed's title; the start of the text when there is none
   published_at   TEXT,                 -- RFC 3339; feed "published", falling back to "updated"
   first_seen_at  TEXT NOT NULL,        -- when TagRss first fetched it
   word_count     INTEGER,              -- NULL when the feed gave no text
@@ -124,10 +128,12 @@ marks (
 )
 
 fetches (
-  source_url  TEXT PRIMARY KEY,
-  feed_title  TEXT,                    -- the feed's own title, shown when the config has none
-  fetched_at  TEXT NOT NULL,
-  error       TEXT                     -- last fetch error, NULL on success
+  source_url     TEXT PRIMARY KEY,
+  feed_title     TEXT,                 -- the feed's own title, shown when the config has none
+  fetched_at     TEXT NOT NULL,
+  error          TEXT,                 -- last fetch error, NULL on success
+  etag           TEXT,                 -- validators of the last successful response,
+  last_modified  TEXT                  --   sent back so an unchanged feed is not downloaded again
 )
 
 meta (
@@ -142,14 +148,22 @@ Unread is recorded explicitly, not as a missing row, because an explicit mark mu
 There is no `sources` table, no `rules` table, and no tag column anywhere.
 
 `fetches` is a cache of the last sync per source, rewritten by every sync and never a source of truth.
-It exists because the feed's own title has to live somewhere once fetched, and because a sync over hundreds of feeds needs a place to report which ones failed.
+It exists because the feed's own title has to live somewhere once fetched, and because a sync over hundreds of feeds needs a place to report which ones failed; `sources` reads it back.
+It also keeps the HTTP validators (`ETag`, `Last-Modified`) of the last successful response.
+Sync sends them with the next request, and a server that answers "304 Not Modified" is spared sending the feed and TagRss is spared parsing it.
+A feed's entries and its validators are written in one transaction, so a feed is never remembered as "seen up to here" without its entries.
 `import` writes the OPML title into each `[[source]]`, so imported sources never depend on this cache for their names.
+
+An entry with no title (microblog posts, mostly) is stored with the first 80 characters of its text as the title, since content is not kept and there is nothing to derive it from later.
 
 Entry identity is `(source, entry id)`, not the URL alone, so the same article appearing in two feeds is kept in both.
 The integer `id` exists only so commands like `read 42` can be typed.
 
 Entries keep their `source_url` after the source is removed from the config file, so unsubscribing does not delete history.
 Such entries have no source tags and appear only in folders whose rules match on system tags alone.
+
+The file carries a schema version (SQLite's `user_version`).
+Opening a file from an older version upgrades it in place; because the database is a cache, an upgrade only ever adds columns or tables and never rewrites entries.
 
 ### Word count
 
@@ -171,6 +185,7 @@ This is recorded as a single `rebuilt_at` timestamp in the database, so no per-e
 
 A fresh install cannot be told apart from a rebuild, so `rebuilt_at` is set whenever the database file is created.
 The first sync therefore starts at inbox zero: only entries published after installation show as unread, not the whole backlog of every feed.
+Undated entries in a source's first sync are part of that backlog and are treated as read too.
 
 ## Locations
 
@@ -183,11 +198,13 @@ Paths never depend on the working directory.
 
 | Command | Does |
 |---|---|
-| `sync` | Fetch every source in the config file and add new entries |
+| `sync` | Fetch every source in the config file and add new entries; failures are counted, and listed when there are few |
+| `sources` | List sources with their `source/<slug>` tag, entry count, newest entry, and last sync; `--failed` shows only the failing ones with their errors |
 | `folders` | List folders with their unread counts |
 | `list <folder>` | List a folder's entries, newest first |
 | `open <entry>` | Open the entry's link in the browser and mark it read |
-| `read <entry>` / `unread <entry>` | Mark read or unread |
+| `read <entry>...` / `unread <entry>...` | Mark entries read or unread |
+| `read --folder <folder>` / `unread --folder <folder>` | Mark everything currently in a folder |
 | `check` | Validate the config file and print the parsed rules |
 | `import <opml>` / `export` | Move sources in from or out to OPML |
 
