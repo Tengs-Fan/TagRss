@@ -21,6 +21,8 @@ pub struct Entry {
     pub read: bool,
     /// Display titles of the sources it came from.
     pub sources: Vec<String>,
+    /// Feed URLs of the sources it came from.
+    pub source_urls: Vec<String>,
     pub tags: HashSet<String>,
 }
 
@@ -113,7 +115,11 @@ fn merge(members: &[Observation], sources: &HashMap<&str, &Source>, fetches: &Ha
 
     let mut source_tags = HashSet::new();
     let mut titles: Vec<String> = Vec::new();
+    let mut source_urls: Vec<String> = Vec::new();
     for o in members {
+        if !source_urls.contains(&o.source_url) {
+            source_urls.push(o.source_url.clone());
+        }
         let source = sources.get(o.source_url.as_str()).copied();
         if let Some(s) = source {
             source_tags.extend(s.tags.iter().cloned());
@@ -136,6 +142,7 @@ fn merge(members: &[Observation], sources: &HashMap<&str, &Source>, fetches: &Ha
         read,
         tags: tags::compute(&facts, now),
         sources: titles,
+        source_urls,
     }
 }
 

@@ -164,7 +164,14 @@ body.view-sources .preview { display: none; }
 /* Sources view */
 table.sources { width: 100%; border-collapse: collapse; font-size: 13.5px; }
 table.sources td { padding: 9px 28px 9px 22px; border-bottom: 1px solid var(--rule); vertical-align: top; }
-table.sources td.state { white-space: nowrap; font: 12px var(--mono); width: 1%; }
+table.sources tr { cursor: pointer; }
+table.sources tr:hover { background: color-mix(in srgb, var(--ink) 3%, transparent); }
+table.sources td.state, table.sources td.counts { white-space: nowrap; font: 12px var(--mono); width: 1%; }
+table.sources td.counts { color: var(--ink-3); text-align: right; }
+table.sources td.counts b { color: var(--accent); }
+header h1 a { color: var(--ink-3); text-decoration: none; font-weight: 450; }
+header h1 a:hover { color: var(--accent); }
+header .sub .err { color: var(--bad); }
 table.sources .err { color: var(--bad); font: 12px var(--mono); overflow-wrap: anywhere; }
 table.sources .okc { color: var(--ok); }
 table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wrap: anywhere; }
@@ -261,7 +268,8 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
 <script>
 const $ = (id) => document.getElementById(id);
 const PAGE = 150;
-const state = { folders: [], folder: null, view: "folder", entries: [], shown: [], cursor: -1, rendered: 0, filter: "", sources: [] };
+/* view: "folder" (a folder's entries), "sources" (the list of sources), "source" (one source's entries). */
+const state = { folders: [], folder: null, view: "folder", entries: [], shown: [], cursor: -1, rendered: 0, filter: "", sources: [], source: null };
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
@@ -326,6 +334,15 @@ function currentFolder() {
 
 function updateHeader() {
   if (state.view === "sources") return;
+  if (state.view === "source") {
+    const s = state.source;
+    const unread = state.entries.filter((e) => !e.read).length;
+    $("title").innerHTML = `<a href="#sources">Sources</a> › ${esc(s.title)}`;
+    const fetched = s.error ? `<span class="err">failed: ${esc(s.error)}</span>` : s.fetched_at ? `fetched ${ago(s.fetched_at)} ago` : "never fetched";
+    $("subtitle").innerHTML = `${unread} unread · ${state.entries.length} total · ${fetched}`;
+    document.title = `${s.title} · TagRss`;
+    return;
+  }
   const f = currentFolder();
   $("title").textContent = f ? f.name : "TagRss";
   $("subtitle").textContent = f ? `${f.unread} unread · ${f.total} total` : "";
@@ -340,7 +357,7 @@ async function selectFolder(name, keepPreview = false) {
   try { localStorage.setItem("tagrss.folder", name); } catch (e) { /* remembering the folder is a convenience */ }
   history.replaceState(null, "", "#" + encodeURIComponent(name));
   $("mark-all").style.display = "";
-  $("search").style.display = "";
+  $("search").placeholder = "Filter titles  /";
   renderFolders();
   $("sources-btn").classList.remove("active");
   state.entries = await api("/api/entries?folder=" + encodeURIComponent(name));
@@ -359,7 +376,9 @@ function applyFilter() {
   if (!state.shown.length) {
     $("list").innerHTML = state.entries.length
       ? `<div class="empty"><strong>Nothing matches “${esc(state.filter)}”</strong></div>`
-      : `<div class="empty"><strong>All caught up</strong>Nothing in this folder. Press <b>s</b> to sync.</div>`;
+      : state.view === "source"
+        ? `<div class="empty"><strong>No entries</strong>Nothing has been fetched from this source yet.</div>`
+        : `<div class="empty"><strong>All caught up</strong>Nothing in this folder. Press <b>s</b> to sync.</div>`;
     return;
   }
   renderMore();
@@ -513,7 +532,12 @@ $("list").addEventListener("click", (ev) => {
   if (row) selectEntry(Number(row.dataset.i));
 });
 
-/* Sources */
+/* Sources: a read-only view of the config's sources; editing them is done in the config file. */
+function setFilter(text) {
+  state.filter = text;
+  $("search").value = text;
+}
+
 async function showSources() {
   state.view = "sources";
   document.body.classList.add("view-sources");
@@ -522,19 +546,65 @@ async function showSources() {
   renderFolders();
   $("sources-btn").classList.add("active");
   $("mark-all").style.display = "none";
-  $("search").style.display = "none";
+  $("search").placeholder = "Filter sources  /";
+  setFilter("");
   const sources = await api("/api/sources");
+  sources.sort((a, b) => (!!b.error - !!a.error) || a.title.localeCompare(b.title));
   state.sources = sources;
   const failing = sources.filter((s) => s.error).length;
   $("title").textContent = "Sources";
   $("subtitle").textContent = `${sources.length} sources · ${failing} failing`;
   document.title = "Sources · TagRss";
-  sources.sort((a, b) => (!!b.error - !!a.error) || a.title.localeCompare(b.title));
-  $("list").innerHTML = `<table class="sources">${sources.map((s) => `<tr>
+  renderSources();
+}
+
+function renderSources() {
+  const q = state.filter.trim().toLowerCase();
+  const shown = q ? state.sources.filter((s) => [s.title, s.url, ...s.tags].join(" ").toLowerCase().includes(q)) : state.sources;
+  $("list").scrollTop = 0;
+  if (!shown.length) {
+    $("list").innerHTML = `<div class="empty"><strong>${q ? `No source matches “${esc(state.filter)}”` : "No sources yet"}</strong>${q ? "" : "Add <code>[[source]]</code> entries to your config file, then press <b>c</b>."}</div>`;
+    return;
+  }
+  $("list").innerHTML = `<table class="sources">${shown.map((s) => `<tr data-url="${esc(s.url)}">
     <td class="state">${s.error ? '<span class="err">failed</span>' : s.fetched_at ? `<span class="okc">ok</span> ${ago(s.fetched_at)}` : "never"}</td>
     <td><div>${esc(s.title)}</div><div class="url">${esc(s.url)}</div>${s.error ? `<div class="err">${esc(s.error)}</div>` : ""}
-    ${s.tags.length ? `<div>${s.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join(" ")}</div>` : ""}</td></tr>`).join("")}</table>`;
+    ${s.tags.length ? `<div>${s.tags.map((t) => `<span class="tag">${esc(t)}</span>`).join(" ")}</div>` : ""}</td>
+    <td class="counts" title="unread / total">${s.unread ? `<b>${s.unread}</b>` : 0} / ${s.total}</td></tr>`).join("")}</table>`;
 }
+
+/* One source: everything fetched from it, whatever folders it falls in. */
+async function selectSource(url) {
+  const sources = await api("/api/sources");
+  sources.sort((a, b) => (!!b.error - !!a.error) || a.title.localeCompare(b.title));
+  state.sources = sources;
+  const source = sources.find((s) => s.url === url);
+  if (!source) return showSources();
+  state.view = "source";
+  state.source = source;
+  document.body.classList.remove("view-sources");
+  clearPreview();
+  history.replaceState(null, "", "#source=" + encodeURIComponent(url));
+  renderFolders();
+  $("sources-btn").classList.add("active");
+  $("mark-all").style.display = "none";
+  $("search").placeholder = "Filter titles  /";
+  setFilter("");
+  state.entries = await api("/api/entries?source=" + encodeURIComponent(url));
+  state.cursor = -1;
+  updateHeader();
+  applyFilter();
+}
+
+$("list").addEventListener("click", (ev) => {
+  const row = ev.target.closest("table.sources tr");
+  if (row) selectSource(row.dataset.url).catch(fail);
+});
+$("title").addEventListener("click", (ev) => {
+  if (!ev.target.closest("a")) return;
+  ev.preventDefault();
+  showSources().catch(fail);
+});
 
 async function updateSourcesCount() {
   try {
@@ -585,7 +655,9 @@ async function pollSync() {
         else if (s.finished) toast(`Synced ${s.finished.sources} sources · ${s.finished.new_observations} new · ${s.finished.failed} failed`, 4000);
         await refreshCounts();
         updateSourcesCount();
-        if (state.view === "folder" && state.folder && !document.body.classList.contains("preview-open")) await selectFolder(state.folder);
+        const previewing = document.body.classList.contains("preview-open");
+        if (state.view === "folder" && state.folder && !previewing) await selectFolder(state.folder);
+        else if (state.view === "source" && !previewing) await selectSource(state.source.url);
         else if (state.view === "sources") await showSources();
         break;
       }
@@ -610,9 +682,10 @@ async function reloadConfig() {
 }
 
 /* Keyboard */
-$("search").addEventListener("input", (e) => { state.filter = e.target.value; applyFilter(); });
+const refilter = () => state.view === "sources" ? renderSources() : applyFilter();
+$("search").addEventListener("input", (e) => { state.filter = e.target.value; refilter(); });
 $("search").addEventListener("keydown", (e) => {
-  if (e.key === "Escape") { e.target.value = ""; state.filter = ""; applyFilter(); e.target.blur(); }
+  if (e.key === "Escape") { e.target.value = ""; state.filter = ""; refilter(); e.target.blur(); }
   if (e.key === "Enter") e.target.blur();
 });
 
@@ -639,7 +712,7 @@ document.addEventListener("keydown", (e) => {
     "?": () => help.classList.add("show"),
   };
   const action = keys[e.key];
-  if (action && (state.view === "folder" || "sc?".includes(e.key) || e.key === "J" || e.key === "K")) {
+  if (action && (state.view !== "sources" || "sc?/".includes(e.key) || e.key === "J" || e.key === "K")) {
     e.preventDefault();
     action();
   }
@@ -654,14 +727,15 @@ $("help").onclick = () => $("help").classList.remove("show");
     try { saved = localStorage.getItem("tagrss.folder"); } catch (e) { /* no storage: start from the first folder */ }
     const hash = decodeURIComponent(location.hash.slice(1));
     const first = state.folders.find((f) => f.name === hash) || state.folders.find((f) => f.name === saved) || state.folders.find((f) => f.unread) || state.folders[0];
-    if (hash === "sources") { state.folder = first?.name; await showSources(); }
-    else if (first) {
-      await selectFolder(first.name);
-      // ?e=<entry id> selects that entry on load.
+    // ?e=<entry id> selects that entry on load.
+    const selectWanted = () => {
       const wanted = Number(new URLSearchParams(location.search).get("e"));
       const index = wanted ? state.shown.findIndex((e) => e.observation_ids.includes(wanted)) : -1;
       if (index >= 0) selectEntry(index);
-    }
+    };
+    if (hash === "sources") { state.folder = first?.name; await showSources(); }
+    else if (location.hash.startsWith("#source=")) { state.folder = first?.name; await selectSource(decodeURIComponent(location.hash.slice(8))); selectWanted(); }
+    else if (first) { await selectFolder(first.name); selectWanted(); }
     else $("list").innerHTML = `<div class="empty"><strong>No folders yet</strong>Add <code>[[folder]]</code> entries to your config file, then press <b>c</b>.</div>`;
     updateSourcesCount();
     const s = await api("/api/sync");

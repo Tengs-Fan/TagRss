@@ -82,12 +82,18 @@ async fn folders(State(state): State<Shared>) -> ApiResult<Vec<tagrss::FolderSum
 }
 
 #[derive(Deserialize)]
-struct FolderQuery {
-    folder: String,
+struct EntriesQuery {
+    folder: Option<String>,
+    source: Option<String>,
 }
 
-async fn entries(State(state): State<Shared>, Query(q): Query<FolderQuery>) -> ApiResult<Vec<tagrss::Entry>> {
-    Ok(Json(core(&state).entries(&q.folder)?))
+async fn entries(State(state): State<Shared>, Query(q): Query<EntriesQuery>) -> ApiResult<Vec<tagrss::Entry>> {
+    let core = core(&state);
+    Ok(Json(match (q.folder, q.source) {
+        (Some(folder), None) => core.entries(&folder)?,
+        (None, Some(source)) => core.source_entries(&source)?,
+        _ => return Err(anyhow::anyhow!("give either folder or source").into()),
+    }))
 }
 
 async fn entry_content(State(state): State<Shared>, Path(id): Path<i64>) -> ApiResult<serde_json::Value> {
@@ -241,6 +247,12 @@ mod tests {
         assert_eq!(folders, serde_json::json!([{ "name": "Test folder", "unread": 0, "total": 0 }]));
         let (status, entries) = call(&app, "GET", "/api/entries?folder=Test%20folder", "").await;
         assert_eq!((status, entries), (StatusCode::OK, serde_json::json!([])));
+        let (status, entries) = call(&app, "GET", "/api/entries?source=http%3A%2F%2F127.0.0.1%3A9%2Ffeed", "").await;
+        assert_eq!((status, entries), (StatusCode::OK, serde_json::json!([])));
+        let (status, _) = call(&app, "GET", "/api/entries", "").await;
+        assert_eq!(status, StatusCode::BAD_REQUEST);
+        let (_, sources) = call(&app, "GET", "/api/sources", "").await;
+        assert_eq!((&sources[0]["unread"], &sources[0]["total"]), (&serde_json::json!(0), &serde_json::json!(0)));
     }
 
     #[tokio::test]

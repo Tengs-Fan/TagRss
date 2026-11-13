@@ -403,6 +403,7 @@ mod tests {
             word_count: None,
             read,
             sources: vec!["Blog".into()],
+            source_urls: vec!["https://example.com/feed".into()],
             tags: HashSet::new(),
         }
     }

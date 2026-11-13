@@ -32,6 +32,8 @@ pub struct SourceStatus {
     pub tags: Vec<String>,
     pub fetched_at: Option<DateTime<Utc>>,
     pub error: Option<String>,
+    pub unread: usize,
+    pub total: usize,
 }
 
 #[derive(Debug, Clone, Default, PartialEq, serde::Serialize)]
@@ -128,6 +130,14 @@ impl Core {
         Ok(self.all_entries()?.into_iter().filter(|e| folder.rule.matches(&e.tags)).collect())
     }
 
+    /// One configured source's entries, newest first, whatever folders they fall in.
+    pub fn source_entries(&self, url: &str) -> Result<Vec<Entry>> {
+        if !self.config.sources.iter().any(|s| s.url == url) {
+            bail!("no source with the url {url}");
+        }
+        Ok(self.all_entries()?.into_iter().filter(|e| e.source_urls.iter().any(|u| u == url)).collect())
+    }
+
     /// Resolves ids of any observations to their entries.
     fn resolve(&self, ids: &[i64]) -> Result<Vec<Entry>> {
         let entries = self.all_entries()?;
@@ -187,16 +197,27 @@ impl Core {
         self.syncer().run(on_event)
     }
 
-    /// Every configured source with the result of its last fetch.
+    /// Every configured source with the result of its last fetch and its entry counts.
     pub fn sources(&self) -> Result<Vec<SourceStatus>> {
         let fetches = self.db.fetches()?;
+        let mut counts: HashMap<String, (usize, usize)> = HashMap::new();
+        for e in self.all_entries()? {
+            for url in e.source_urls {
+                let (unread, total) = counts.entry(url).or_default();
+                *total += 1;
+                *unread += usize::from(!e.read);
+            }
+        }
         Ok(self
             .config
             .sources
             .iter()
             .map(|s| {
                 let fetch = fetches.get(&s.url);
+                let (unread, total) = counts.get(&s.url).copied().unwrap_or_default();
                 SourceStatus {
+                    unread,
+                    total,
                     url: s.url.clone(),
                     title: entry::source_title(&s.url, Some(s), fetch),
                     tags: s.tags.clone(),
@@ -329,6 +350,20 @@ mod tests {
         assert_eq!((all.unread, all.total), (1, 2));
         assert_eq!(core.mark_folder_read("All").unwrap(), 1);
         assert_eq!(core.folders().unwrap()[1].unread, 0);
+    }
+
+    #[test]
+    fn a_source_lists_its_entries_and_counts_them() {
+        let (_dir, mut core) = setup();
+        // The shared article belongs to both sources.
+        assert_eq!(core.source_entries("https://blog.example/feed").unwrap().len(), 1);
+        assert_eq!(core.source_entries("https://lobsters.example/feed").unwrap().len(), 2);
+        assert!(core.source_entries("https://nope.example/feed").is_err());
+        let shared = core.source_entries("https://blog.example/feed").unwrap().remove(0);
+        core.mark(&[shared.id], true).unwrap();
+        let sources = core.sources().unwrap();
+        assert_eq!((sources[0].unread, sources[0].total), (0, 1));
+        assert_eq!((sources[1].unread, sources[1].total), (1, 2));
     }
 
     #[test]

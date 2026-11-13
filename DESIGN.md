@@ -260,7 +260,10 @@ The binary serves one embedded page and a small JSON API over the core on `127.0
 It listens on loopback only, so other machines cannot reach it.
 The API is internal to the page and carries no stability promise.
 
-The page shows folders with unread counts, the selected folder's entries, and a Sources view listing every source with its last fetch error.
+The page shows folders with unread counts, the selected folder's entries, and a Sources view listing every source with its tags, its unread and total counts, and its last fetch error.
+Clicking a source shows everything fetched from it, whatever folders those entries fall in, with the same list and preview as a folder.
+The page never edits sources or folders: the config file is the one source of truth, edited by hand or by an agent, and the page only reloads it (`c`).
+A graphical editor would be a second way to write the same file, and is not worth its cost.
 The page has three panes: folders, the folder's entries, and a preview.
 Clicking an entry, or moving to it with `j`/`k`, shows its stored content in the preview pane and marks it read; opening the original in a new tab is a separate action (`Enter`, `o`, or the button in the preview).
 Feed HTML is untrusted, so the preview renders it in a sandboxed frame where scripts cannot run.
