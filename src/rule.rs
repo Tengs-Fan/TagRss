@@ -13,7 +13,7 @@ use std::fmt;
 
 use crate::tags::has_tag;
 
-#[derive(Debug, Clone, PartialEq)]
+#[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub enum Expr {
     /// Matches the tag and everything below it.
     Tag(String),

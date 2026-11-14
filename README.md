@@ -12,7 +12,9 @@ tagrss tui          # the same reader in the terminal
 ```
 
 In the reader: `j`/`k` move, `Enter` opens in a new tab and marks read, `r` toggles read, `R` marks the folder read, `J`/`K` change folder, `s` syncs, `c` reloads the config, `/` filters, `?` shows the keys.
-The Sources view lists every source with its counts and last fetch error; click a source to see everything fetched from it.
+`u` switches between unread only and everything.
+The sidebar switches between Folders and Sources; a folder shows its rule, and a source shows everything fetched from it.
+YouTube and bilibili entries play in the preview.
 Sources and folders are edited only in the config file, then reloaded with `c`.
 
 ## Setup

@@ -85,8 +85,23 @@ nav { overflow-y: auto; padding: 0 8px 8px; flex: 1; }
 .folder .count { font: 12px var(--mono); color: var(--ink-3); }
 .folder.has-unread .count { color: var(--accent); font-weight: 600; }
 .folder.has-unread .name { color: var(--ink); }
-.aside-foot { border-top: 1px solid var(--rule); padding: 8px; }
-.aside-foot .folder .count.bad { color: var(--bad); font-weight: 600; }
+.folder .count.bad { color: var(--bad); font-weight: 600; }
+.tabs { display: flex; gap: 3px; margin: 0 12px 10px; padding: 3px; border-radius: 9px; background: color-mix(in srgb, var(--ink) 7%, transparent); }
+.tabs button { flex: 1; border: 0; background: none; padding: 5px 0; border-radius: 7px; cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.tabs button.active { background: var(--surface); color: var(--ink); font-weight: 600; box-shadow: 0 1px 2px rgb(0 0 0 / 0.08); }
+.side-filter { display: block; width: calc(100% - 24px); max-width: none; margin: 0 12px 8px; }
+.side-filter[hidden] { display: none; }
+
+/* The folder's rule, or the source's tags, under the header */
+.rule { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; padding: 8px 28px; border-bottom: 1px solid var(--rule); font: 12px var(--mono); color: var(--ink-3); }
+.rule[hidden] { display: none; }
+.rule .lbl { font-weight: 600; font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; margin-right: 6px; }
+.rule .t { background: var(--surface); border: 1px solid var(--rule); border-radius: 6px; padding: 2px 7px; color: var(--ink); }
+.rule .t.sys { border-style: dashed; color: var(--ink-2); }
+.rule .op { font-weight: 600; font-size: 10.5px; color: var(--accent); }
+.rule .op.not { color: var(--bad); }
+.rule .grp { display: inline-flex; flex-wrap: wrap; align-items: center; gap: 6px; border: 1px solid var(--rule); border-radius: 8px; padding: 3px 6px; }
+.rule .url { overflow-wrap: anywhere; }
 
 /* Main */
 main { display: flex; flex-direction: column; min-width: 0; min-height: 0; }
@@ -128,7 +143,11 @@ body.view-sources .preview { display: none; }
 .preview .pv-meta { display: flex; flex-wrap: wrap; gap: 4px 12px; font-size: 13px; color: var(--ink-3); margin-bottom: 12px; }
 .preview .pv-meta .src { color: var(--ink-2); }
 .preview .pv-actions { display: flex; gap: 8px; }
-.preview iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
+.preview > iframe { flex: 1; width: 100%; border: 0; background: var(--bg); }
+.pv-video { padding: 16px 28px 8px; flex: none; }
+.pv-video[hidden] { display: none; }
+.pv-video iframe { display: block; width: 100%; aspect-ratio: 16 / 9; max-height: 62vh; border: 0; border-radius: 10px; background: #000; }
+.btn.on { border-color: var(--accent); color: var(--accent); }
 .preview .pv-empty { margin: auto; padding: 40px; text-align: center; color: var(--ink-3); }
 .preview .pv-empty strong { display: block; color: var(--ink-2); font-size: 16px; margin-bottom: 6px; }
 .pv-close { display: none; }
@@ -205,6 +224,7 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
   .search { order: 10; width: 100%; max-width: none; }
   .btn kbd, header .sub { display: none; }
   .entry { padding: 11px 16px 11px 12px; }
+  .rule { padding: 8px 16px; }
   table.sources td { padding: 9px 16px; }
 }
 </style>
@@ -215,9 +235,12 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
     <svg viewBox="0 0 32 32" aria-hidden="true"><rect width="32" height="32" rx="7" fill="var(--accent)"/><circle cx="10" cy="22" r="3" fill="white"/><path d="M8 13a11 11 0 0 1 11 11M8 6a18 18 0 0 1 18 18" stroke="white" stroke-width="3" fill="none" stroke-linecap="round"/></svg>
     TagRss <small>?&nbsp;keys</small>
   </div>
-  <div class="section-label">Folders</div>
+  <div class="tabs">
+    <button id="tab-folders" class="active">Folders</button>
+    <button id="tab-sources">Sources</button>
+  </div>
+  <input class="search side-filter" id="side-filter" placeholder="Filter sources" autocomplete="off" hidden>
   <nav id="folders"></nav>
-  <div class="aside-foot"><button class="folder" id="sources-btn"><span class="name">Sources</span><span class="count" id="sources-count"></span></button></div>
 </aside>
 <main>
   <header>
@@ -228,10 +251,12 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
     </div>
     <div class="spacer"></div>
     <input class="search" id="search" placeholder="Filter titles  /" autocomplete="off">
+    <button class="btn" id="unread-only" title="Show only unread entries, or read ones too">Unread only <kbd>u</kbd></button>
     <button class="btn" id="mark-all" title="Mark everything in this folder read"><span class="long">Mark folder read</span><span class="short" style="display:none">Read all</span> <kbd>R</kbd></button>
     <button class="btn primary" id="sync">Sync <kbd>s</kbd></button>
   </header>
   <div class="progress" id="progress"><i></i></div>
+  <div class="rule" id="rule" hidden></div>
   <div class="split">
     <div class="list" id="list"></div>
     <section class="preview" id="preview">
@@ -245,6 +270,7 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
           <button class="btn pv-close" id="pv-close">Close <kbd>Esc</kbd></button>
         </div>
       </div>
+      <div class="pv-video" id="pv-video" hidden><iframe id="pv-player" allow="autoplay; encrypted-media; picture-in-picture; fullscreen" allowfullscreen referrerpolicy="strict-origin-when-cross-origin"></iframe></div>
       <iframe id="pv-frame" hidden sandbox="allow-popups allow-popups-to-escape-sandbox" referrerpolicy="no-referrer"></iframe>
     </section>
   </div>
@@ -257,7 +283,8 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
     <dt>Enter, o</dt><dd>Open the original in a new tab</dd>
     <dt>Esc</dt><dd>Close the preview</dd>
     <dt>r</dt><dd>Toggle read</dd>
-    <dt>J / K</dt><dd>Next / previous folder</dd>
+    <dt>u</dt><dd>Show unread only, or read entries too</dd>
+    <dt>J / K</dt><dd>Next / previous folder, or source in the Sources view</dd>
     <dt>R</dt><dd>Mark the folder read</dd>
     <dt>s</dt><dd>Sync all sources</dd>
     <dt>c</dt><dd>Reload the config file</dd>
@@ -269,7 +296,8 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
 const $ = (id) => document.getElementById(id);
 const PAGE = 150;
 /* view: "folder" (a folder's entries), "sources" (the list of sources), "source" (one source's entries). */
-const state = { folders: [], folder: null, view: "folder", entries: [], shown: [], cursor: -1, rendered: 0, filter: "", sources: [], source: null };
+const state = { folders: [], folder: null, view: "folder", entries: [], shown: [], cursor: -1, rendered: 0, filter: "", sources: [], source: null, sideFilter: "", unreadOnly: true };
+try { state.unreadOnly = localStorage.getItem("tagrss.unreadOnly") !== "0"; } catch (e) { /* no storage: unread only */ }
 
 async function api(path, opts = {}) {
   const res = await fetch(path, { headers: { "content-type": "application/json" }, ...opts });
@@ -314,8 +342,14 @@ async function loadFolders() {
   renderFolders();
 }
 
+/* The sidebar has two views: folders, or sources. Which one shows follows what the main pane shows. */
 function renderFolders() {
   const nav = $("folders");
+  const bySource = state.view !== "folder";
+  $("tab-folders").classList.toggle("active", !bySource);
+  $("tab-sources").classList.toggle("active", bySource);
+  $("side-filter").hidden = !bySource;
+  if (bySource) { renderSideSources(); updateHeader(); return; }
   if (!state.folders.length) {
     nav.innerHTML = `<div class="empty" style="padding:20px 10px">No folders yet.<br>Add <code>[[folder]]</code> to your config, then press <b>c</b>.</div>`;
     return;
@@ -332,6 +366,23 @@ function currentFolder() {
   return state.folders.find((f) => f.name === state.folder);
 }
 
+const SYSTEM_TAG = /^(state|age|source|length)(\/|$)/;
+const tagChip = (t) => `<span class="t ${SYSTEM_TAG.test(t) ? "sys" : ""}">${esc(t)}</span>`;
+
+/* Draws a parsed rule: tags as chips, nested groups boxed, so the precedence is visible. */
+function ruleHtml(x, root = true) {
+  if (x.Tag !== undefined) return tagChip(x.Tag);
+  if (x.Not) return `<span class="grp"><span class="op not">NOT</span>${ruleHtml(x.Not, false)}</span>`;
+  const [op, parts] = x.And ? ["AND", x.And] : ["OR", x.Or];
+  const inner = parts.map((p) => ruleHtml(p, false)).join(`<span class="op">${op}</span>`);
+  return root ? inner : `<span class="grp">${inner}</span>`;
+}
+
+function showRule(html) {
+  $("rule").hidden = !html;
+  $("rule").innerHTML = html || "";
+}
+
 function updateHeader() {
   if (state.view === "sources") return;
   if (state.view === "source") {
@@ -341,9 +392,11 @@ function updateHeader() {
     const fetched = s.error ? `<span class="err">failed: ${esc(s.error)}</span>` : s.fetched_at ? `fetched ${ago(s.fetched_at)} ago` : "never fetched";
     $("subtitle").innerHTML = `${unread} unread · ${state.entries.length} total · ${fetched}`;
     document.title = `${s.title} · TagRss`;
+    showRule(`<span class="lbl">Tags</span>${s.tags.map(tagChip).join("") || "none"}<span class="url">${esc(s.url)}</span>`);
     return;
   }
   const f = currentFolder();
+  showRule(f ? `<span class="lbl">Rule</span>${ruleHtml(f.rule)}` : "");
   $("title").textContent = f ? f.name : "TagRss";
   $("subtitle").textContent = f ? `${f.unread} unread · ${f.total} total` : "";
   document.title = f && f.unread ? `(${f.unread}) ${f.name} · TagRss` : "TagRss";
@@ -357,9 +410,9 @@ async function selectFolder(name, keepPreview = false) {
   try { localStorage.setItem("tagrss.folder", name); } catch (e) { /* remembering the folder is a convenience */ }
   history.replaceState(null, "", "#" + encodeURIComponent(name));
   $("mark-all").style.display = "";
+  $("unread-only").style.display = "";
   $("search").placeholder = "Filter titles  /";
   renderFolders();
-  $("sources-btn").classList.remove("active");
   state.entries = await api("/api/entries?folder=" + encodeURIComponent(name));
   state.cursor = -1;
   applyFilter();
@@ -368,14 +421,19 @@ async function selectFolder(name, keepPreview = false) {
 /* Entries */
 function applyFilter() {
   const q = state.filter.trim().toLowerCase();
-  state.shown = q ? state.entries.filter((e) => e.title.toLowerCase().includes(q) || e.sources.join(" ").toLowerCase().includes(q)) : state.entries;
+  // The list is a snapshot: an entry read after this stays visible until the list is next built.
+  const pool = state.unreadOnly ? state.entries.filter((e) => !e.read) : state.entries;
+  state.shown = q ? pool.filter((e) => e.title.toLowerCase().includes(q) || e.sources.join(" ").toLowerCase().includes(q)) : pool;
   state.cursor = Math.min(state.cursor, state.shown.length - 1);
   state.rendered = 0;
   $("list").innerHTML = "";
   $("list").scrollTop = 0;
   if (!state.shown.length) {
-    $("list").innerHTML = state.entries.length
+    const hidden = state.entries.length - pool.length;
+    $("list").innerHTML = pool.length
       ? `<div class="empty"><strong>Nothing matches “${esc(state.filter)}”</strong></div>`
+      : hidden
+        ? `<div class="empty"><strong>All caught up</strong>${hidden} read ${hidden === 1 ? "entry is" : "entries are"} hidden. Press <b>u</b> to show them.</div>`
       : state.view === "source"
         ? `<div class="empty"><strong>No entries</strong>Nothing has been fetched from this source yet.</div>`
         : `<div class="empty"><strong>All caught up</strong>Nothing in this folder. Press <b>s</b> to sync.</div>`;
@@ -429,7 +487,10 @@ function setRowRead(i, read) {
 }
 
 async function refreshCounts() {
-  try { await loadFolders(); } catch (e) { fail(e); }
+  try {
+    if (state.view !== "folder") await loadSources();
+    await loadFolders();
+  } catch (e) { fail(e); }
 }
 
 async function markRead(i) {
@@ -455,10 +516,44 @@ function selectEntry(i) {
   markRead(state.cursor);
 }
 
+function showUnreadOnly() {
+  const b = $("unread-only");
+  b.classList.toggle("on", state.unreadOnly);
+  b.innerHTML = `${state.unreadOnly ? "Unread only" : "Read + unread"} <kbd>u</kbd>`;
+}
+function toggleUnreadOnly() {
+  if (state.view === "sources") return;
+  state.unreadOnly = !state.unreadOnly;
+  try { localStorage.setItem("tagrss.unreadOnly", state.unreadOnly ? "1" : "0"); } catch (e) { /* the choice lasts for this page only */ }
+  showUnreadOnly();
+  clearPreview();
+  state.cursor = -1;
+  applyFilter();
+}
+$("unread-only").onclick = toggleUnreadOnly;
+showUnreadOnly();
+
+/* A link to a video becomes the address of that site's embeddable player. */
+function videoEmbed(link) {
+  let u;
+  try { u = new URL(link); } catch (e) { return null; }
+  const host = u.hostname.replace(/^(www|m)\./, "");
+  const youtube = (id) => id ? `https://www.youtube-nocookie.com/embed/${encodeURIComponent(id)}` : null;
+  if (host === "youtube.com") return youtube(u.searchParams.get("v") || (u.pathname.match(/^\/(?:shorts|embed|live)\/([\w-]+)/) || [])[1]);
+  if (host === "youtu.be") return youtube(u.pathname.slice(1));
+  if (host === "bilibili.com") {
+    const m = u.pathname.match(/^\/video\/(BV\w+)/);
+    return m ? `https://player.bilibili.com/player.html?bvid=${m[1]}&autoplay=0` : null;
+  }
+  return null;
+}
+
 /* Preview */
 let previewSeq = 0;
 function clearPreview() {
   previewSeq++;
+  $("pv-video").hidden = true;
+  $("pv-player").src = "about:blank";
   document.body.classList.remove("preview-open");
   $("pv-head").hidden = true;
   $("pv-frame").hidden = true;
@@ -494,12 +589,16 @@ async function showPreview(i) {
   const len = words(e.word_count);
   $("pv-meta").innerHTML = `<span class="src">${esc(e.sources.join(" · "))}</span><span>${esc(new Date(e.date).toLocaleString(undefined, { dateStyle: "medium", timeStyle: "short" }))}</span>${len ? `<span>${len}</span>` : ""}`;
   $("pv-open").disabled = !e.url;
+  // A video plays here in the site's own player, which is a separate frame from the feed's HTML.
+  const video = e.url ? videoEmbed(e.url) : null;
+  $("pv-video").hidden = !video;
+  if ($("pv-player").getAttribute("src") !== (video || "about:blank")) $("pv-player").src = video || "about:blank";
   const frame = $("pv-frame");
   frame.hidden = false;
   try {
     const { content } = await api(`/api/entries/${e.id}/content`);
     if (seq !== previewSeq) return;
-    frame.srcdoc = frameDoc(content || `<p class="none">This feed sent no text for this entry. Open the original to read it.</p>`, e.url);
+    frame.srcdoc = frameDoc(content || (video ? "" : `<p class="none">This feed sent no text for this entry. Open the original to read it.</p>`), e.url);
   } catch (err) { if (seq === previewSeq) fail(err); }
 }
 $("pv-open").onclick = () => openEntry(state.cursor);
@@ -538,29 +637,52 @@ function setFilter(text) {
   $("search").value = text;
 }
 
+async function loadSources() {
+  const sources = await api("/api/sources");
+  sources.sort((a, b) => a.title.localeCompare(b.title));
+  state.sources = sources;
+}
+
+function matchingSources(filter) {
+  const q = filter.trim().toLowerCase();
+  return q ? state.sources.filter((s) => [s.title, s.url, ...s.tags].join(" ").toLowerCase().includes(q)) : state.sources;
+}
+
+/* The sidebar's source list: an overview row, then every source with its unread count. */
+function renderSideSources() {
+  const failing = state.sources.filter((s) => s.error).length;
+  const current = state.view === "source" ? state.source.url : null;
+  $("folders").innerHTML = `<button class="folder ${state.view === "sources" ? "active" : ""}" data-all="1">
+      <span class="name">All sources</span><span class="count ${failing ? "bad" : ""}">${failing ? failing + " failing" : state.sources.length}</span>
+    </button>` + matchingSources(state.sideFilter).map((s) => `
+    <button class="folder ${s.unread ? "has-unread" : ""} ${s.url === current ? "active" : ""}" data-url="${esc(s.url)}" title="${esc(s.error || s.url)}">
+      <span class="name">${esc(s.title)}</span><span class="count ${s.error ? "bad" : ""}">${s.error ? "!" : s.unread || ""}</span>
+    </button>`).join("");
+}
+
 async function showSources() {
+  await loadSources();
   state.view = "sources";
   document.body.classList.add("view-sources");
   clearPreview();
   history.replaceState(null, "", "#sources");
+  showRule("");
   renderFolders();
-  $("sources-btn").classList.add("active");
+  $("unread-only").style.display = "none";
   $("mark-all").style.display = "none";
   $("search").placeholder = "Filter sources  /";
   setFilter("");
-  const sources = await api("/api/sources");
-  sources.sort((a, b) => (!!b.error - !!a.error) || a.title.localeCompare(b.title));
-  state.sources = sources;
-  const failing = sources.filter((s) => s.error).length;
+  const failing = state.sources.filter((s) => s.error).length;
   $("title").textContent = "Sources";
-  $("subtitle").textContent = `${sources.length} sources · ${failing} failing`;
+  $("subtitle").textContent = `${state.sources.length} sources · ${failing} failing`;
   document.title = "Sources · TagRss";
   renderSources();
 }
 
 function renderSources() {
   const q = state.filter.trim().toLowerCase();
-  const shown = q ? state.sources.filter((s) => [s.title, s.url, ...s.tags].join(" ").toLowerCase().includes(q)) : state.sources;
+  // Failing sources first; the sort is stable, so each group stays alphabetical.
+  const shown = [...matchingSources(state.filter)].sort((a, b) => !!b.error - !!a.error);
   $("list").scrollTop = 0;
   if (!shown.length) {
     $("list").innerHTML = `<div class="empty"><strong>${q ? `No source matches “${esc(state.filter)}”` : "No sources yet"}</strong>${q ? "" : "Add <code>[[source]]</code> entries to your config file, then press <b>c</b>."}</div>`;
@@ -575,10 +697,8 @@ function renderSources() {
 
 /* One source: everything fetched from it, whatever folders it falls in. */
 async function selectSource(url) {
-  const sources = await api("/api/sources");
-  sources.sort((a, b) => (!!b.error - !!a.error) || a.title.localeCompare(b.title));
-  state.sources = sources;
-  const source = sources.find((s) => s.url === url);
+  await loadSources();
+  const source = state.sources.find((s) => s.url === url);
   if (!source) return showSources();
   state.view = "source";
   state.source = source;
@@ -586,7 +706,8 @@ async function selectSource(url) {
   clearPreview();
   history.replaceState(null, "", "#source=" + encodeURIComponent(url));
   renderFolders();
-  $("sources-btn").classList.add("active");
+  $("folders").querySelector(".active")?.scrollIntoView({ block: "nearest" });
+  $("unread-only").style.display = "";
   $("mark-all").style.display = "none";
   $("search").placeholder = "Filter titles  /";
   setFilter("");
@@ -606,16 +727,21 @@ $("title").addEventListener("click", (ev) => {
   showSources().catch(fail);
 });
 
-async function updateSourcesCount() {
-  try {
-    const sources = await api("/api/sources");
-    const failing = sources.filter((s) => s.error).length;
-    const c = $("sources-count");
-    c.textContent = failing ? `${failing} failing` : sources.length;
-    c.classList.toggle("bad", failing > 0);
-  } catch (e) { /* the count is decoration */ }
-}
-$("sources-btn").onclick = () => { showSources().catch(fail); document.body.classList.remove("nav-open"); };
+$("folders").addEventListener("click", (ev) => {
+  const b = ev.target.closest(".folder");
+  if (!b || b.dataset.name !== undefined) return;
+  (b.dataset.all ? showSources() : selectSource(b.dataset.url)).catch(fail);
+  document.body.classList.remove("nav-open");
+});
+$("tab-folders").onclick = () => {
+  const name = state.folder || state.folders[0]?.name;
+  if (name) selectFolder(name).catch(fail);
+};
+$("tab-sources").onclick = () => showSources().catch(fail);
+$("side-filter").addEventListener("input", (e) => { state.sideFilter = e.target.value; renderSideSources(); });
+$("side-filter").addEventListener("keydown", (e) => {
+  if (e.key === "Escape") { e.target.value = ""; state.sideFilter = ""; renderSideSources(); e.target.blur(); }
+});
 
 /* Sync */
 let polling = false;
@@ -654,7 +780,6 @@ async function pollSync() {
         if (s.error) fail(new Error("Sync failed: " + s.error));
         else if (s.finished) toast(`Synced ${s.finished.sources} sources · ${s.finished.new_observations} new · ${s.finished.failed} failed`, 4000);
         await refreshCounts();
-        updateSourcesCount();
         const previewing = document.body.classList.contains("preview-open");
         if (state.view === "folder" && state.folder && !previewing) await selectFolder(state.folder);
         else if (state.view === "source" && !previewing) await selectSource(state.source.url);
@@ -676,7 +801,6 @@ async function reloadConfig() {
     await loadFolders();
     if (!currentFolder()) state.folder = state.folders[0]?.name;
     if (state.folder) await selectFolder(state.folder);
-    updateSourcesCount();
     toast(warnings.length ? `Config reloaded · ${warnings.length} warnings: ${warnings[0]}` : "Config reloaded", warnings.length ? 6000 : 2600);
   } catch (e) { toast("Config invalid, kept the old one: " + e.message.split("\n").pop(), 7000); }
 }
@@ -694,9 +818,15 @@ document.addEventListener("keydown", (e) => {
   const help = $("help");
   if (help.classList.contains("show")) { help.classList.remove("show"); e.preventDefault(); return; }
   const folderStep = (d) => {
-    const i = state.folders.findIndex((f) => f.name === state.folder);
-    const next = state.folders[Math.max(0, Math.min(state.folders.length - 1, i + d))];
-    if (next) selectFolder(next.name).catch(fail);
+    const clamp = (list, i) => list[Math.max(0, Math.min(list.length - 1, i + d))];
+    if (state.view === "folder") {
+      const next = clamp(state.folders, state.folders.findIndex((f) => f.name === state.folder));
+      if (next) selectFolder(next.name).catch(fail);
+    } else {
+      const list = matchingSources(state.sideFilter);
+      const next = clamp(list, state.view === "source" ? list.findIndex((s) => s.url === state.source.url) : -1);
+      if (next) selectSource(next.url).catch(fail);
+    }
   };
   const keys = {
     j: () => selectEntry(state.cursor + 1), ArrowDown: () => selectEntry(state.cursor + 1),
@@ -705,6 +835,7 @@ document.addEventListener("keydown", (e) => {
     J: () => folderStep(1), K: () => folderStep(-1),
     Enter: () => openEntry(state.cursor), o: () => openEntry(state.cursor),
     r: () => toggleRead(state.cursor),
+    u: toggleUnreadOnly,
     R: markFolderRead,
     s: () => { if (!$("sync").disabled) startSync(); },
     c: reloadConfig,
@@ -737,7 +868,6 @@ $("help").onclick = () => $("help").classList.remove("show");
     else if (location.hash.startsWith("#source=")) { state.folder = first?.name; await selectSource(decodeURIComponent(location.hash.slice(8))); selectWanted(); }
     else if (first) { await selectFolder(first.name); selectWanted(); }
     else $("list").innerHTML = `<div class="empty"><strong>No folders yet</strong>Add <code>[[folder]]</code> entries to your config file, then press <b>c</b>.</div>`;
-    updateSourcesCount();
     const s = await api("/api/sync");
     if (s.running) { showSync(s); pollSync(); }
   } catch (e) { fail(e); }

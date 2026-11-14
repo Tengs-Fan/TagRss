@@ -260,8 +260,12 @@ The binary serves one embedded page and a small JSON API over the core on `127.0
 It listens on loopback only, so other machines cannot reach it.
 The API is internal to the page and carries no stability promise.
 
-The page shows folders with unread counts, the selected folder's entries, and a Sources view listing every source with its tags, its unread and total counts, and its last fetch error.
-Clicking a source shows everything fetched from it, whatever folders those entries fall in, with the same list and preview as a folder.
+The sidebar has two views, switched by tabs: Folders, with unread counts, and Sources, a filterable list of every source with its unread count.
+A folder shows its rule above its entries, drawn from the parsed expression: tags as chips, nested groups boxed, system tags dashed.
+A source shows its tags and feed address there instead, and lists everything fetched from it, whatever folders those entries fall in.
+"All sources" at the top of the Sources view is the overview: every source with its tags, counts, and last fetch error, failing ones first.
+Lists show unread entries only by default; `u` toggles showing read ones too, and the choice is remembered in the browser.
+An entry whose link is a YouTube or bilibili video plays in the preview through that site's embedded player, which loads from that site when the entry is selected.
 The page never edits sources or folders: the config file is the one source of truth, edited by hand or by an agent, and the page only reloads it (`c`).
 A graphical editor would be a second way to write the same file, and is not worth its cost.
 The page has three panes: folders, the folder's entries, and a preview.

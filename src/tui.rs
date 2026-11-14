@@ -390,7 +390,7 @@ mod tests {
     use std::collections::HashSet;
 
     fn folder(name: &str, unread: usize) -> FolderSummary {
-        FolderSummary { name: name.into(), unread, total: unread + 1 }
+        FolderSummary { name: name.into(), rule: tagrss::Expr::Tag("state".into()), unread, total: unread + 1 }
     }
 
     fn entry(id: i64, title: &str, read: bool) -> Entry {

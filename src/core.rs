@@ -10,6 +10,7 @@ use crate::db::Database;
 use crate::entry::{self, Entry};
 use crate::feed::{self, SyncEvent};
 use crate::opml::{self, ImportReport};
+use crate::rule::Expr;
 
 pub struct Core {
     config_path: PathBuf,
@@ -21,6 +22,8 @@ pub struct Core {
 #[derive(Debug, Clone, PartialEq, serde::Serialize)]
 pub struct FolderSummary {
     pub name: String,
+    /// The parsed rule, so a user interface can show why entries are here.
+    pub rule: Expr,
     pub unread: usize,
     pub total: usize,
 }
@@ -119,7 +122,7 @@ impl Core {
                     total += 1;
                     unread += usize::from(!e.read);
                 }
-                FolderSummary { name: f.name.clone(), unread, total }
+                FolderSummary { name: f.name.clone(), rule: f.rule.clone(), unread, total }
             })
             .collect())
     }
@@ -318,8 +321,9 @@ mod tests {
     fn first_sync_is_all_unread_and_duplicates_are_one_entry() {
         let (_dir, core) = setup();
         let folders = core.folders().unwrap();
-        assert_eq!(folders[0], FolderSummary { name: "OS".into(), unread: 1, total: 1 });
-        assert_eq!(folders[1], FolderSummary { name: "All".into(), unread: 2, total: 2 });
+        let os = Expr::And(vec![Expr::Tag("topic/os".into()), Expr::Tag("state/unread".into())]);
+        assert_eq!(folders[0], FolderSummary { name: "OS".into(), rule: os, unread: 1, total: 1 });
+        assert_eq!(folders[1], FolderSummary { name: "All".into(), rule: Expr::Tag("state".into()), unread: 2, total: 2 });
     }
 
     #[test]

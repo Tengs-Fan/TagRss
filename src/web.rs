@@ -244,7 +244,7 @@ mod tests {
         assert_eq!(page.status(), StatusCode::OK);
         let (status, folders) = call(&app, "GET", "/api/folders", "").await;
         assert_eq!(status, StatusCode::OK);
-        assert_eq!(folders, serde_json::json!([{ "name": "Test folder", "unread": 0, "total": 0 }]));
+        assert_eq!(folders, serde_json::json!([{ "name": "Test folder", "rule": { "Tag": "topic/test" }, "unread": 0, "total": 0 }]));
         let (status, entries) = call(&app, "GET", "/api/entries?folder=Test%20folder", "").await;
         assert_eq!((status, entries), (StatusCode::OK, serde_json::json!([])));
         let (status, entries) = call(&app, "GET", "/api/entries?source=http%3A%2F%2F127.0.0.1%3A9%2Ffeed", "").await;
