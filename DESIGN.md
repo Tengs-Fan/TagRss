@@ -261,8 +261,9 @@ It listens on loopback only, so other machines cannot reach it.
 The API is internal to the page and carries no stability promise.
 
 The sidebar has two views, switched by tabs: Folders, with unread counts, and Sources, a filterable list of every source with its unread count.
-A folder shows its rule above its entries, drawn from the parsed expression: tags as chips, nested groups boxed, system tags dashed.
-A source shows its tags and feed address there instead, and lists everything fetched from it, whatever folders those entries fall in.
+Hovering a folder, in the sidebar or in the header, shows its rule as a tree drawn from the parsed expression: each operator is a node with its operands below it, and system tags are dashed.
+Hovering a source shows its tags, feed address, and last error instead.
+A source lists everything fetched from it, whatever folders those entries fall in.
 "All sources" at the top of the Sources view is the overview: every source with its tags, counts, and last fetch error, failing ones first.
 Lists show unread entries only by default; `u` toggles showing read ones too, and the choice is remembered in the browser.
 An entry whose link is a YouTube or bilibili video plays in the preview through that site's embedded player, which loads from that site when the entry is selected.
