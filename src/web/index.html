@@ -123,7 +123,13 @@ header {
   backdrop-filter: blur(8px);
 }
 header h1 { margin: 0; font-size: 19px; font-weight: 650; letter-spacing: -0.015em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-header .sub { font: 12.5px var(--mono); color: var(--ink-3); white-space: nowrap; }
+header .sub { font: 12.5px var(--mono); color: var(--ink-3); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#heading { flex: 0 1 auto; min-width: 120px; }
+@media (max-width: 1100px) {
+  header .search { width: 130px; }
+  header .btn kbd, .long { display: none; }
+  .short { display: inline !important; }
+}
 .spacer { flex: 1; }
 .search {
   width: 220px; max-width: 30vw;
@@ -224,8 +230,17 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
 .help dd { margin: 0; color: var(--ink-2); }
 
 /* On a wide window the sidebar is a column that can be hidden; on a narrow one it slides over. */
-.menu-btn { padding: 6px 9px; }
-body.nav-hidden { grid-template-columns: minmax(0, 1fr); }
+.menu-btn { padding: 6px; color: var(--ink-2); }
+.menu-btn:hover { color: var(--ink); }
+.menu-btn svg { width: 18px; height: 18px; display: block; }
+/* A tooltip for icon buttons: what it does and its key. */
+[data-tip] { position: relative; }
+[data-tip]::after {
+  content: attr(data-tip); position: absolute; left: 0; top: calc(100% + 8px); z-index: 30;
+  white-space: nowrap; pointer-events: none; opacity: 0; transition: opacity 0.12s 0.25s;
+  background: var(--ink); color: var(--bg); font: 12px var(--sans); padding: 5px 9px; border-radius: 6px;
+}
+[data-tip]:hover::after, [data-tip]:focus-visible::after { opacity: 1; }body.nav-hidden { grid-template-columns: minmax(0, 1fr); }
 body.nav-hidden aside { display: none; }
 @media (max-width: 760px) {
   body.nav-hidden aside { display: flex; }
@@ -257,8 +272,10 @@ body.nav-hidden aside { display: none; }
 </aside>
 <main>
   <header>
-    <button class="btn menu-btn" id="menu" aria-label="Toggle sidebar" title="Toggle sidebar (b)">☰</button>
-    <div style="min-width:0" id="heading">
+    <button class="btn menu-btn" id="menu" aria-label="Hide sidebar" data-tip="Hide sidebar  ·  b">
+      <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2.5" y="3.5" width="15" height="13" rx="2.5"/><path d="M7.5 3.5v13"/><rect class="panel" x="3.3" y="4.3" width="3.6" height="11.4" rx="1.2" fill="currentColor" stroke="none" opacity="0.35"/></svg>
+    </button>
+    <div id="heading">
       <h1 id="title">TagRss</h1>
       <div class="sub" id="subtitle"></div>
     </div>
@@ -839,14 +856,28 @@ async function pollSync() {
 $("sync").onclick = startSync;
 $("mark-all").onclick = markFolderRead;
 /* Narrow windows slide the sidebar over the page each time; wide ones remember whether it is hidden. */
+const narrow = () => matchMedia("(max-width: 760px)").matches;
 function toggleSidebar() {
-  if (matchMedia("(max-width: 760px)").matches) return document.body.classList.toggle("nav-open");
-  const hidden = document.body.classList.toggle("nav-hidden");
-  try { localStorage.setItem("tagrss.navHidden", hidden ? "1" : "0"); } catch (e) { /* lasts for this page only */ }
+  if (narrow()) document.body.classList.toggle("nav-open");
+  else {
+    const hidden = document.body.classList.toggle("nav-hidden");
+    try { localStorage.setItem("tagrss.navHidden", hidden ? "1" : "0"); } catch (e) { /* lasts for this page only */ }
+  }
+  labelSidebarButton();
+}
+/* The button's label and tooltip say what pressing it will do now. */
+function labelSidebarButton() {
+  const b = document.body.classList;
+  const shown = narrow() ? b.contains("nav-open") : !b.contains("nav-hidden");
+  const label = shown ? "Hide sidebar" : "Show sidebar";
+  $("menu").setAttribute("aria-label", label);
+  $("menu").dataset.tip = `${label}  ·  b`;
+  $("menu").querySelector(".panel").style.opacity = shown ? "" : "0";
 }
 try { if (localStorage.getItem("tagrss.navHidden") === "1") document.body.classList.add("nav-hidden"); } catch (e) { /* shown by default */ }
-$("menu").onclick = toggleSidebar;
-async function reloadConfig() {
+labelSidebarButton();
+matchMedia("(max-width: 760px)").addEventListener("change", labelSidebarButton);
+$("menu").onclick = toggleSidebar;async function reloadConfig() {
   try {
     const { warnings } = await post("/api/reload");
     await loadFolders();
