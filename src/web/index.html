@@ -274,8 +274,8 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
         <h2 id="pv-title"></h2>
         <div class="pv-meta" id="pv-meta"></div>
         <div class="pv-actions">
-          <button class="btn primary" id="pv-open">Open original ↗ <kbd>o</kbd></button>
-          <button class="btn" id="pv-unread">Mark unread <kbd>r</kbd></button>
+          <button class="btn" id="pv-unread">Mark read <kbd>r</kbd></button>
+          <button class="btn" id="pv-open">Open original ↗ <kbd>o</kbd></button>
           <button class="btn pv-close" id="pv-close">Close <kbd>Esc</kbd></button>
         </div>
       </div>
@@ -289,8 +289,8 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
 <div class="help" id="help"><div>
   <h2>Keyboard</h2>
   <dl>
-    <dt>j / k</dt><dd>Next / previous entry: preview it and mark it read</dd>
-    <dt>Enter, o</dt><dd>Open the original in a new tab</dd>
+    <dt>j / k</dt><dd>Next / previous entry: preview it</dd>
+    <dt>Enter, o</dt><dd>Open the original in a new tab and mark it read</dd>
     <dt>Esc</dt><dd>Close the preview</dd>
     <dt>r</dt><dd>Toggle read</dd>
     <dt>u</dt><dd>Show unread only, or read entries too</dd>
@@ -516,6 +516,16 @@ function moveCursor(i, scroll = true) {
 function setRowRead(i, read) {
   state.shown[i].read = read;
   rowAt(i)?.classList.toggle("read", read);
+  if (i === state.cursor) showReadButton();
+}
+
+/* The preview's button offers the opposite of the selected entry's state. */
+function showReadButton() {
+  const e = state.shown[state.cursor];
+  if (!e) return;
+  const b = $("pv-unread");
+  b.classList.toggle("primary", !e.read);
+  b.innerHTML = `${e.read ? "Mark unread" : "Mark read"} <kbd>r</kbd>`;
 }
 
 async function refreshCounts() {
@@ -540,12 +550,12 @@ function openEntry(i) {
   markRead(i);
 }
 
-/* Selecting an entry previews it and marks it read. */
+/* Selecting an entry only previews it; marking it read is the reader's own act (r, or opening it). */
 function selectEntry(i) {
   if (!state.shown.length) return;
   moveCursor(i);
   showPreview(state.cursor);
-  markRead(state.cursor);
+  showReadButton();
 }
 
 function showUnreadOnly() {

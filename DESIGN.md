@@ -221,7 +221,7 @@ Reading:
 
 - Every query is computed fresh from observations, the config, and the current time, read once per query so one list is consistent; nothing is cached between queries.
 - Entries are ordered newest first by their date, ties broken by id.
-- Selecting an entry to preview it marks it read; so does opening its link.
+- Previewing an entry does not mark it read: skimming a list must not empty it. Marking is explicit, and opening an entry's link counts as marking it.
 - Nothing else is implicit: scrolling past an entry never marks it.
 - When an entry has several observations, the preview shows the longest content among them.
 - Marking a folder read marks what it contains at that moment; entries that arrive later stay unread.
@@ -270,7 +270,7 @@ An entry whose link is a YouTube or bilibili video plays in the preview through 
 The page never edits sources or folders: the config file is the one source of truth, edited by hand or by an agent, and the page only reloads it (`c`).
 A graphical editor would be a second way to write the same file, and is not worth its cost.
 The page has three panes: folders, the folder's entries, and a preview.
-Clicking an entry, or moving to it with `j`/`k`, shows its stored content in the preview pane and marks it read; opening the original in a new tab is a separate action (`Enter`, `o`, or the button in the preview).
+Clicking an entry, or moving to it with `j`/`k`, shows its stored content in the preview pane and leaves it unread; `r` or the preview's button marks it read, and opening the original in a new tab (`Enter`, `o`, or the button) marks it read too.
 Feed HTML is untrusted, so the preview renders it in a sandboxed frame where scripts cannot run.
 On a narrow window the preview slides over the list and `Esc` closes it.
 The other keys match the terminal reader, plus `J`/`K` to change folder and `/` to filter titles.

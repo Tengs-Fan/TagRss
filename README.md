@@ -81,14 +81,14 @@ Tags are computed when entries are shown and never stored, so changing a source'
 Use `--port 8080` for a fixed address and `--no-browser` to skip opening it.
 
 - **Sidebar:** switch between **Folders** and **Sources**. A source shows everything fetched from it, whatever folders those entries fall in; "All sources" lists every source with its last fetch error.
-- **Preview:** selecting an entry shows what the feed sent in a side pane and marks it read. YouTube and bilibili entries play there.
+- **Preview:** selecting an entry shows what the feed sent in a side pane. It stays unread until you mark it (`r`, or the button) or open the original. YouTube and bilibili entries play there.
 - **Rules on hover:** hover a folder to see its rule as a tree, or a source to see its tags.
 - **Unread only** is the default; `u` shows read entries too.
 
 | Key | Does |
 |---|---|
-| `j` / `k` | Next / previous entry: preview it and mark it read |
-| `Enter`, `o` | Open the original in a new tab |
+| `j` / `k` | Next / previous entry: preview it |
+| `Enter`, `o` | Open the original in a new tab and mark it read |
 | `r` | Toggle read |
 | `u` | Unread only, or read entries too |
 | `R` | Mark the folder read |
