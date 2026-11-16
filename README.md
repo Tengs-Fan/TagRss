@@ -96,6 +96,7 @@ Use `--port 8080` for a fixed address and `--no-browser` to skip opening it.
 | `/` | Filter by title |
 | `s` | Sync |
 | `c` | Reload the config file |
+| `b` | Show or hide the sidebar (also the ☰ button) |
 | `?` | Show the keys |
 
 After editing the config, press `c`.

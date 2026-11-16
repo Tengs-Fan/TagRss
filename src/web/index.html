@@ -223,14 +223,17 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
 .help dt { font: 12px var(--mono); color: var(--accent); }
 .help dd { margin: 0; color: var(--ink-2); }
 
-.menu-btn { display: none; }
+/* On a wide window the sidebar is a column that can be hidden; on a narrow one it slides over. */
+.menu-btn { padding: 6px 9px; }
+body.nav-hidden { grid-template-columns: minmax(0, 1fr); }
+body.nav-hidden aside { display: none; }
 @media (max-width: 760px) {
+  body.nav-hidden aside { display: flex; }
   body { grid-template-columns: minmax(0, 1fr); }
   .long { display: none; }
   .short { display: inline !important; }
   aside { position: fixed; inset: 0 25% 0 0; z-index: 5; transform: translateX(-100%); transition: transform 0.2s; box-shadow: 10px 0 40px rgb(0 0 0 / 0.2); }
   body.nav-open aside { transform: none; }
-  .menu-btn { display: inline-flex; }
   header { padding: 12px 16px; flex-wrap: wrap; }
   .search { order: 10; width: 100%; max-width: none; }
   .btn kbd, header .sub { display: none; }
@@ -254,7 +257,7 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
 </aside>
 <main>
   <header>
-    <button class="btn menu-btn" id="menu" aria-label="Folders">☰</button>
+    <button class="btn menu-btn" id="menu" aria-label="Toggle sidebar" title="Toggle sidebar (b)">☰</button>
     <div style="min-width:0" id="heading">
       <h1 id="title">TagRss</h1>
       <div class="sub" id="subtitle"></div>
@@ -299,6 +302,7 @@ table.sources .url { color: var(--ink-3); font: 11.5px var(--mono); overflow-wra
     <dt>s</dt><dd>Sync all sources</dd>
     <dt>c</dt><dd>Reload the config file</dd>
     <dt>/</dt><dd>Filter titles</dd>
+    <dt>b</dt><dd>Show / hide the sidebar</dd>
     <dt>?</dt><dd>This help</dd>
   </dl>
 </div></div>
@@ -834,8 +838,14 @@ async function pollSync() {
 }
 $("sync").onclick = startSync;
 $("mark-all").onclick = markFolderRead;
-$("menu").onclick = () => document.body.classList.toggle("nav-open");
-
+/* Narrow windows slide the sidebar over the page each time; wide ones remember whether it is hidden. */
+function toggleSidebar() {
+  if (matchMedia("(max-width: 760px)").matches) return document.body.classList.toggle("nav-open");
+  const hidden = document.body.classList.toggle("nav-hidden");
+  try { localStorage.setItem("tagrss.navHidden", hidden ? "1" : "0"); } catch (e) { /* lasts for this page only */ }
+}
+try { if (localStorage.getItem("tagrss.navHidden") === "1") document.body.classList.add("nav-hidden"); } catch (e) { /* shown by default */ }
+$("menu").onclick = toggleSidebar;
 async function reloadConfig() {
   try {
     const { warnings } = await post("/api/reload");
@@ -882,9 +892,10 @@ document.addEventListener("keydown", (e) => {
     c: reloadConfig,
     "/": () => $("search").focus(),
     "?": () => help.classList.add("show"),
+    b: toggleSidebar,
   };
   const action = keys[e.key];
-  if (action && (state.view !== "sources" || "sc?/".includes(e.key) || e.key === "J" || e.key === "K")) {
+  if (action && (state.view !== "sources" || "sc?/b".includes(e.key) || e.key === "J" || e.key === "K")) {
     e.preventDefault();
     action();
   }
